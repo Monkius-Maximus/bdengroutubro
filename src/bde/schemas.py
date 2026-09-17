@@ -160,7 +160,7 @@ class DetalheEtapa(BaseModel):
     )
     atingiu_meta: bool = Field(description="diferenca >= 0.")
     percentual_atingimento: float = Field(
-        description="Diferença da etapa convertida pela tabela IDEPE (0,0 a 2,0)."
+        description="Diferença da etapa convertida pela escala (0,0 a 1,75)."
     )
 
 
@@ -169,7 +169,7 @@ class RespostaBDE(BaseModel):
 
     # ---- Resultado final ----
     percentual_bde: float = Field(
-        ..., ge=0.0, le=3.0, description="Cota total do BDE (0,0 a 3,0). C45."
+        ..., ge=0.0, le=3.0, description="Cota total do BDE, já limitada a 3,0."
     )
     percentual_formatado: str = Field(
         ..., description="Percentual pronto para exibição (ex.: '250%')."
@@ -183,17 +183,33 @@ class RespostaBDE(BaseModel):
         description="H47 — Σ(diferença × matrículas) / Σ(matrículas), 4 casas."
     )
     percentual_idepe: float = Field(
-        description="H45 — média ponderada convertida pela tabela (0,0 a 2,0)."
+        description=(
+            "Atingimento da meta: média ponderada convertida pela escala de 8 "
+            "degraus (0,0 a 1,75). É a cota base, somada às demais."
+        )
     )
 
-    # ---- Cotas, na mesma decomposição da planilha ----
-    cota_resultado: float = Field(description="B40 — min(percentual_idepe, 1,0).")
-    cota_alem_resultado: float = Field(
-        description="B41 — parcela do IDEPE acima de 100% (0,0 a 1,0)."
+    # ---- Cotas que compõem a soma ----
+    cota_equidade: float = Field(
+        description="+100% por evolução dos estudantes PPI e de NSE I e II."
     )
-    cota_equidade: float = Field(description="B42 — redução de desigualdades PPI/NSE.")
-    cota_elementares: float = Field(description="B43 — 1º terço de elementares.")
-    cota_participacao: float = Field(description="B44 — participação ≥ 80% no SAEPE.")
+    cota_elementares: float = Field(
+        description="+100% por estar no 1º terço com menor % de elementares."
+    )
+    cota_participacao: float = Field(
+        description="+50% por participação ≥ 80% no SAEPE."
+    )
+
+    # ---- Teto ----
+    soma_sem_teto: float = Field(
+        description=(
+            "Soma das cotas antes do corte. Pode passar de 3,0: o máximo "
+            "somável é 1,75 + 1,0 + 1,0 + 0,5 = 4,25."
+        )
+    )
+    teto_aplicado: bool = Field(
+        description="A soma ultrapassou 300% e foi limitada ao teto."
+    )
 
     # ---- Transparência ----
     etapas: list[DetalheEtapa] = Field(

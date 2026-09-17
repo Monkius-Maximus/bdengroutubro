@@ -93,88 +93,95 @@ de negócio.
 Três achados. O primeiro é decisivo e precisa de decisão de negócio antes de
 escrevermos o `BDECalculatorService`.
 
-### 5.1 `C45` não trata os bônus como cumulativos — DECIDIDO: reproduzir
+### 5.1 `C45` foi REJEITADA como regra de cálculo
 
-A regra declarada diz "independentes e cumulativos". A fórmula usa
-`OR(B42=1; B43=1)`: **ter as duas condições vale o mesmo que ter uma só**,
-exceto no caso único em que o IDEPE é exatamente 200%. Além disso, `B41` é
-descartada no caminho normal. Divergem 20 das 28 combinações.
+Histórico da decisão, porque ela mudou:
 
-**Decisão: reproduzir a planilha**, por ser mecanismo já validado e em uso na
-SEPLAG. O simulador web deve devolver o mesmo número que o gestor vê na
-planilha aberta na outra janela.
+1. A auditoria mostrou que `C45` combina os bônus com `OR` e diverge da regra
+   de negócio declarada em 20 das 28 combinações.
+2. Decidiu-se reproduzir `C45`, por ser mecanismo já em uso e validado.
+3. O slide oficial **"CENÁRIO DE METAS 2025 — BDE 2026"**, com os quatro
+   cenários narrados pela área de negócio, mostrou que `C45` **não descreve a
+   regra que a SEPLAG comunica às escolas**. Decisão revertida.
 
-O 3º ramo (`(B40+B41)>1 → 2`) é **inalcançável e redundante**. Inalcançável
-porque `B40` é `min(H45; 1)`, logo `B40<=1` é sempre verdadeiro e o 2º ramo
-captura antes. Redundante porque, se fosse alcançado, devolveria `2` — o mesmo
-que `1+B40` com `B40=1`. Logo `C45` reduz, **sem perda de fidelidade**, a:
+A aritmética que fecha a questão é o exemplo do próprio material: uma escola que
+supera a meta e atinge os dois objetivos bônus somaria `175 + 100 + 100 = 375`,
+"cortado em 300". O número **375 só existe se os bônus somarem**. Em `C45` esse
+mesmo caso dá 200% — 375 nunca chega a se formar, porque a fórmula usa `OR`.
 
-```python
-if cota_resultado == 1.0 and cota_alem == 1.0 and equidade and elementares:
-    return 2.5
-if equidade or elementares:
-    return 1.0 + cota_resultado
-return cota_resultado
+| Cenário oficial | Regra oficial | `C45` | Modelo adotado |
+|---|---|---|---|
+| Abaixo de −0,3, sem bônus | 0% | 0% | 0% |
+| Abaixo da meta + os dois bônus | até 200% | 100% ✗ | 200% |
+| Atingiu a meta + os dois bônus | até 300% | 200% ✗ | 300% |
+| Passou da meta + os dois bônus | 300%, não 375% | 200% ✗ | 300% |
+
+**Regra em vigor:**
+
+```
+total = min(atingimento + equidade + elementares + participação, 300%)
 ```
 
-Equivalência verificada em 804 combinações contínuas e nas 36 discretas: zero
-divergências.
+`C45` passa a ser tratada como bug de um simulador auxiliar, não como norma.
+As células `B40` (cota resultado) e `B41` (cota além do resultado) não têm
+equivalente no modelo adotado e saíram do contrato da API: no modelo cumulativo
+o atingimento entra inteiro na soma, sem ser partido em 100%.
 
-### 5.2 Buraco na faixa (−0,3; −0,2) em `H45` — DECIDIDO: reproduzir
+### 5.2 Buraco na faixa (−0,3; −0,2) — RESOLVIDO
 
-`H45` começa com `IF(H47 < -0,3; 0; IF(H47 <= -0,3; 0,25; IF(H47 < -0,2; 0; …`.
-O terceiro teste devolve **0%** para qualquer diferença estritamente entre
-−0,3 e −0,2; só a igualdade exata a −0,3 rende 25%.
+`H45` devolve 0% para diferenças estritamente entre −0,3 e −0,2, e só a
+igualdade exata a −0,3 rende 25%. Chegou a ser reproduzido por fidelidade.
 
-**Decisão: reproduzir o comportamento**, pelo mesmo motivo da §5.1.
+O material oficial encerra a dúvida em duas frentes: o slide traz
+`≥ −0,3 → 25%`, e o texto da área de negócio diz que "aqueles que ficarem
+**abaixo** de 0,3 décimos não receberão". Confirma-se o erro de digitação na
+escada de IFs, que lia errado a própria grade `E42:M43` da planilha. A escala
+implementada usa `≥ limite inferior` em todos os degraus.
 
-Registro para quem for reavaliar: a própria grade de consulta da planilha
-(`E42:M43`) traz `0,25` embaixo de `−0,3`, e as outras oito faixas usam
-`≥ limite inferior`. É a escada de IFs que lê a grade errado. **Recomendamos
-levar o ponto ao Núcleo da SEPLAG** (Zaplag (81) 98494-4837, nota 6 da
-planilha): se confirmado como erro de digitação, basta trocar a ordem dos dois
-primeiros testes em `converter_diferenca_em_percentual`.
+### 5.3 A planilha tem um degrau a mais que o slide — REMOVIDO
 
-Enquanto isso, o simulador emite um alerta explícito quando a média cai nessa
-faixa, para o gestor não ler 0% como defeito do sistema.
+A grade `E42:M43` tem 9 degraus e termina em `≥ 0,4 → 200%`. O slide tem 8 e
+termina em `≥ 0,3 → 175%`, e o texto oficial diz "0,3 **ou mais** = 175%".
 
-### 5.3 A cota de participação não é condicional na planilha
+Adotados os 8 degraus do slide. O teto do atingimento é **175%**, e `≥ 0,3` é
+degrau terminal. Registro para reavaliação: a faixa azul do slide diz "O IDEB e
+o Bônus", e a pasta tem abas separadas para IDEB e IDEPE — se as duas escalas
+diferirem de fato, este é o ponto a revisitar.
 
-`B44` é a constante `0,5`, somada incondicionalmente — a planilha não pergunta
-sobre participação. A regra de negócio deste produto torna essa cota
-condicional a participação ≥ 80% no SAEPE, o que introduz um resultado novo que
-a planilha não consegue produzir: `0%`. O campo `apto_a_receber` existe para
-esse caso.
+### 5.4 A cota de participação não existe na planilha
 
-Registro de contexto: no ciclo anterior (BDE 2025, sobre resultados de 2024) a
-cota adicional por participação ≥ 80% foi de **25%**, não 50%. O percentual muda
-entre ciclos — daí `COTA_PARTICIPACAO` ser constante nomeada em `service.py`.
+`B44` é a constante `0,5`, somada incondicionalmente. O slide não menciona
+participação. A regra do projeto a mantém condicional a participação ≥ 80% em
+todos os componentes e etapas do SAEPE, valendo +50%, e é assim que está
+implementada.
+
+No ciclo anterior (BDE 2025, resultados de 2024) essa cota foi de **25%**. O
+percentual muda entre ciclos — daí `COTA_PARTICIPACAO` ser constante nomeada.
 
 ## 6. Tabela-verdade — referência de conferência manual
 
-Saída de `C45` para as 9 faixas de IDEPE × equidade × elementares. A coluna
-final já inclui a cota de participação; sem participação, subtraia 50 pontos.
-É contra esta tabela que o motor Python foi conferido (36/36).
+Total do BDE por atingimento × objetivos bônus × participação. Máximo somável:
+`175 + 100 + 100 + 50 = 425%`, sempre cortado em 300%.
 
-| IDEPE | Sem bônus | Um bônus | Dois bônus | Com participação (dois bônus) |
-|---|---|---|---|---|
-| 0% | 0% | 100% | 100% | 150% |
-| 25% | 25% | 125% | 125% | 175% |
-| 50% | 50% | 150% | 150% | 200% |
-| 75% | 75% | 175% | 175% | 225% |
-| 100% | 100% | 200% | 200% | 250% |
-| 125% | 100% | 200% | 200% | 250% |
-| 150% | 100% | 200% | 200% | 250% |
-| 175% | 100% | 200% | 200% | 250% |
-| 200% | 100% | 200% | **250%** | **300%** |
+| Atingimento | sem bônus | + partic. | 1 bônus | + partic. | 2 bônus | + partic. |
+|---|---|---|---|---|---|---|
+| 0% | 0% | 50% | 100% | 150% | 200% | 250% |
+| 25% | 25% | 75% | 125% | 175% | 225% | 275% |
+| 50% | 50% | 100% | 150% | 200% | 250% | 300% |
+| 75% | 75% | 125% | 175% | 225% | 275% | 300% |
+| 100% | 100% | 150% | 200% | 250% | 300% | 300% |
+| 125% | 125% | 175% | 225% | 275% | 300% | 300% |
+| 150% | 150% | 200% | 250% | 300% | 300% | 300% |
+| 175% | 175% | 225% | 275% | 300% | 300% | 300% |
 
 Três leituras que o produto precisa comunicar:
 
-1. **300% só existe em uma combinação**: IDEPE de 200% + as duas metas de
-   equidade + participação. Não há valores entre 250% e 300%.
-2. **IDEPE acima de 100% é irrelevante** fora dessa combinação: 125%, 150%,
-   175% e 200% rendem a mesma cota que 100%.
-3. **Ter os dois bônus vale o mesmo que ter um só**, exceto naquela combinação.
-
-Cotas distintas possíveis em `C45`: 0%, 25%, 50%, 75%, 100%, 125%, 150%, 175%,
-200% e 250%.
+1. **Os objetivos bônus valem mais que o desempenho na meta.** Sair de 0% para
+   175% de atingimento rende 175 pontos; atingir os dois objetivos bônus rende
+   200. Uma escola abaixo da meta com os dois bônus (200%) supera uma escola que
+   passou da meta sem nenhum (175%).
+2. **O teto corta com frequência.** Qualquer escola que atinja a meta e os dois
+   objetivos já soma 300% — participação e desempenho extra não acrescentam
+   nada além disso.
+3. **`≥ 0,3` é degrau terminal.** Superar a meta em 0,3 ou em 1,2 dá o mesmo
+   atingimento de 175%.
