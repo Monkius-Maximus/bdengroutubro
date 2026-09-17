@@ -163,12 +163,17 @@ def _gerar_alertas(
                 f"IDEPE para {ganho * 100:.0f}%."
             )
 
-    no_teto_absoluto = percentual_idepe == 2.0 and tem_equidade and tem_elementares
-    if percentual_idepe > 1.0 and not no_teto_absoluto:
+    if 1.0 < percentual_idepe < 2.0:
         alertas.append(
             "Sua cota de resultado já está no teto de 100%. Superar ainda mais a "
             "meta só aumenta o BDE se o atingimento chegar a 200% (diferença de "
             "+0,40 ou mais) e as duas metas de equidade forem atingidas."
+        )
+    elif percentual_idepe == 2.0 and not (tem_equidade and tem_elementares):
+        alertas.append(
+            "Seu atingimento do IDEPE já está no máximo (200%), mas a cota de "
+            "resultado é limitada a 100%. O que ainda pode elevar o seu BDE são "
+            "as metas de equidade."
         )
 
     if not tem_equidade and not tem_elementares:

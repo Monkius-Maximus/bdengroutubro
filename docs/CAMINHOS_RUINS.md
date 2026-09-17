@@ -208,13 +208,20 @@ CPF, matrícula funcional ou nome não entram em nenhuma fórmula. Coletá-los
 *Mitigação recomendada:* manter o simulador anônimo. Se o dado não entra na
 conta, não é pedido.
 
-### C7. Duplicar a tabela de conversão no frontend — [Aberto]
+### C7. Duplicar a tabela de conversão no frontend — [Mitigado]
 Para dar preview instantâneo enquanto o usuário digita, é tentador reimplementar
 a conversão em JavaScript. Duas fontes de verdade que divergem no primeiro
 ajuste de regra.
 
-*Mitigação recomendada:* o preview vem do backend, ou o backend expõe a tabela
-como dado. A regra vive em um lugar só.
+*Mitigação:* o preview vem do backend. `POST /api/v1/simular-bde` é stateless e
+barato — o frontend chama a cada mudança de resposta (com debounce ao digitar) e
+usa o `percentual_formatado` que voltar. Não é preciso endpoint separado para a
+tabela: isso seria uma segunda porta para a mesma regra.
+
+Os limites de validação de cada campo (8 a 50.000 matrículas, IDEPE de 1,5 a
+9,2) também não precisam ser recopiados: o `/openapi.json` já os publica como
+`minimum`/`maximum`, junto com a descrição de cada pergunta. O wizard pode ser
+gerado a partir dali.
 
 ### C8. Ler o `.xlsx` em tempo de execução — [Aberto]
 Usar a planilha como fonte de dados em produção acopla o serviço a um arquivo
@@ -235,5 +242,8 @@ regras foram transcritas para código e auditadas em `EXTRACAO_PLANILHA.md`.
 | A8 | Buraco da faixa (−0,3; −0,2) em `H45` | Decidido: reproduzir, com alerta explícito |
 | — | Confirmar o buraco da faixa com o Núcleo da SEPLAG | **Aberto — fora do código** |
 | B4 | Cota de participação fixada em 50% | Mitigado: constante nomeada por ciclo |
-| C3 | CORS liberado | Aberto, antes de produção |
-| C7 | Tabela de conversão duplicada no frontend | Aberto: expor a tabela como endpoint |
+| C7 | Regra duplicada no frontend | Mitigado: preview via API + `/openapi.json` |
+| A3 | Trocar meta e resultado de campo | Aberto — cabe ao wizard |
+| A5 | Decimal com vírgula | Aberto — cabe ao wizard |
+| A6 / A7 | Matrículas do ano errado, IDEB no lugar do IDEPE | Aberto — cabe à rotulagem do wizard |
+| C3 | CORS liberado | Aberto — antes de produção, não bloqueia o dev |
