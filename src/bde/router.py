@@ -1,12 +1,12 @@
 """
-Router FastAPI — Simulador Bônus de Desempenho Educacional (BDE).
+Router FastAPI — Simulador do Bônus de Desempenho Educacional (BDE).
 
 Endpoint: POST /api/v1/simular-bde
 """
 
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 
 from src.bde.schemas import RequisicaoBDE, RespostaBDE
 from src.bde.service import calcular_bde
@@ -17,15 +17,10 @@ router = APIRouter(prefix="/api/v1", tags=["BDE"])
 @router.post("/simular-bde", response_model=RespostaBDE)
 async def simular_bde(requisicao: RequisicaoBDE) -> RespostaBDE:
     """
-    Simula o Bônus de Desempenho Educacional.
+    Simula a cota do BDE a partir das respostas acumuladas do wizard.
 
-    O frontend envia todas as respostas acumuladas do wizard.
-    O backend retorna o percentual final detalhado, quebrado por componente.
+    Sem try/except: o `RequisicaoBDE` já garante as pré-condições e devolve 422
+    com o campo exato. O que passar dele e quebrar é bug do serviço e deve
+    aparecer como 500, não disfarçado de erro de validação.
     """
-    try:
-        return calcular_bde(requisicao)
-    except Exception as exc:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Erro no cálculo do BDE: {exc}",
-        )
+    return calcular_bde(requisicao)

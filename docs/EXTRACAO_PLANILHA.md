@@ -93,85 +93,88 @@ de negócio.
 Três achados. O primeiro é decisivo e precisa de decisão de negócio antes de
 escrevermos o `BDECalculatorService`.
 
-### 5.1 `C45` não trata os bônus como cumulativos (BLOQUEANTE)
+### 5.1 `C45` não trata os bônus como cumulativos — DECIDIDO: reproduzir
 
-A regra declarada diz "duas condições extras que adicionam bônus de forma
-**independente**, cumulativas até o teto". A fórmula usa `OR(B42=1; B43=1)`:
-**ter as duas condições vale o mesmo que ter uma só**, exceto no caso único em
-que o IDEPE é exatamente 200%.
+A regra declarada diz "independentes e cumulativos". A fórmula usa
+`OR(B42=1; B43=1)`: **ter as duas condições vale o mesmo que ter uma só**,
+exceto no caso único em que o IDEPE é exatamente 200%. Além disso, `B41` é
+descartada no caminho normal. Divergem 20 das 28 combinações.
 
-Além disso, `B41` (cota além do resultado) é **descartada** no caminho normal:
-um IDEPE de 200% sem nenhum bônus resulta em 150%, o mesmo que 100% sem bônus.
-O 3º ramo (`1+B41 > 1 → 2`), que corrigiria isso, é **código morto**: `B40` é
-`min(H45; 1)` e portanto `B40<=1` é sempre verdadeiro, de modo que o 2º ramo
-captura todos os casos antes.
+**Decisão: reproduzir a planilha**, por ser mecanismo já validado e em uso na
+SEPLAG. O simulador web deve devolver o mesmo número que o gestor vê na
+planilha aberta na outra janela.
 
-Comparação exaustiva (já somada a cota de participação de 50%):
+O 3º ramo (`(B40+B41)>1 → 2`) é **inalcançável e redundante**. Inalcançável
+porque `B40` é `min(H45; 1)`, logo `B40<=1` é sempre verdadeiro e o 2º ramo
+captura antes. Redundante porque, se fosse alcançado, devolveria `2` — o mesmo
+que `1+B40` com `B40=1`. Logo `C45` reduz, **sem perda de fidelidade**, a:
 
-| IDEPE | Equidade | Elementares | Planilha (C45) | Cumulativo (regra declarada) |
-|---|---|---|---|---|
-| 0% | Não | Não | 50% | 50% |
-| 0% | Sim | Sim | 150% | **250%** |
-| 50% | Sim | Sim | 200% | **300%** |
-| 75% | Sim | Sim | 225% | **300%** |
-| 100% | Sim | Não | 250% | 250% |
-| 100% | Sim | Sim | 250% | **300%** |
-| 125% | Não | Não | **150%** | 175% |
-| 150% | Não | Não | **150%** | 200% |
-| 200% | Não | Não | **150%** | 250% |
-| 200% | Sim | Não | 250% | **300%** |
-| 200% | Sim | Sim | 300% | 300% |
+```python
+if cota_resultado == 1.0 and cota_alem == 1.0 and equidade and elementares:
+    return 2.5
+if equidade or elementares:
+    return 1.0 + cota_resultado
+return cota_resultado
+```
 
-Divergem 20 das 28 combinações possíveis. **O código hoje no repositório
-(`service.py`) implementa a coluna "Cumulativo"** — ou seja, hoje ele não
-reproduz a planilha.
+Equivalência verificada em 804 combinações contínuas e nas 36 discretas: zero
+divergências.
 
-### 5.2 Buraco na faixa (−0,3; −0,2) na fórmula `H45`
+### 5.2 Buraco na faixa (−0,3; −0,2) em `H45` — DECIDIDO: reproduzir
 
 `H45` começa com `IF(H47 < -0,3; 0; IF(H47 <= -0,3; 0,25; IF(H47 < -0,2; 0; …`.
 O terceiro teste devolve **0%** para qualquer diferença estritamente entre
 −0,3 e −0,2; só a igualdade exata a −0,3 rende 25%.
 
-| Diferença | H45 (planilha) | Regra declarada |
-|---|---|---|
-| −0,30 | 25% | 25% |
-| −0,29 | **0%** | 25% |
-| −0,25 | **0%** | 25% |
-| −0,21 | **0%** | 25% |
-| −0,20 | 50% | 50% |
+**Decisão: reproduzir o comportamento**, pelo mesmo motivo da §5.1.
 
-Como `H47` é arredondado a 4 casas, cair exatamente em −0,3 é raro em escolas
-com mais de uma etapa. Na prática, a planilha zera a bonificação de escolas que
-ficaram pouco abaixo da meta. Isso é um erro de digitação da fórmula, não uma
-regra: o padrão `≥ limite inferior` vale para todas as outras oito faixas.
-**Recomendação: seguir a regra declarada.**
+Registro para quem for reavaliar: a própria grade de consulta da planilha
+(`E42:M43`) traz `0,25` embaixo de `−0,3`, e as outras oito faixas usam
+`≥ limite inferior`. É a escada de IFs que lê a grade errado. **Recomendamos
+levar o ponto ao Núcleo da SEPLAG** (Zaplag (81) 98494-4837, nota 6 da
+planilha): se confirmado como erro de digitação, basta trocar a ordem dos dois
+primeiros testes em `converter_diferenca_em_percentual`.
+
+Enquanto isso, o simulador emite um alerta explícito quando a média cai nessa
+faixa, para o gestor não ler 0% como defeito do sistema.
 
 ### 5.3 A cota de participação não é condicional na planilha
 
 `B44` é a constante `0,5`, somada incondicionalmente — a planilha não pergunta
 sobre participação. A regra de negócio deste produto torna essa cota
-condicional a participação ≥ 80% no SAEPE, o que introduz um resultado novo
-que a planilha não consegue produzir: `0%` (IDEPE zerado, sem bônus, sem
-participação). O campo `apto_a_receber` existe justamente para esse caso.
+condicional a participação ≥ 80% no SAEPE, o que introduz um resultado novo que
+a planilha não consegue produzir: `0%`. O campo `apto_a_receber` existe para
+esse caso.
 
 Registro de contexto: no ciclo anterior (BDE 2025, sobre resultados de 2024) a
-cota adicional por participação ≥ 80% foi de **25%**, não 50%. O percentual
-muda entre ciclos e precisa ser uma constante nomeada e versionada, nunca um
-literal espalhado pelo serviço.
+cota adicional por participação ≥ 80% foi de **25%**, não 50%. O percentual muda
+entre ciclos — daí `COTA_PARTICIPACAO` ser constante nomeada em `service.py`.
 
-## 6. Decisão pendente
+## 6. Tabela-verdade — referência de conferência manual
 
-Para o `BDECalculatorService` a pergunta é uma só:
+Saída de `C45` para as 9 faixas de IDEPE × equidade × elementares. A coluna
+final já inclui a cota de participação; sem participação, subtraia 50 pontos.
+É contra esta tabela que o motor Python foi conferido (36/36).
 
-> **O simulador web deve reproduzir `C45` fielmente (inclusive o `OR` e o ramo
-> morto), ou implementar a regra cumulativa declarada?**
+| IDEPE | Sem bônus | Um bônus | Dois bônus | Com participação (dois bônus) |
+|---|---|---|---|---|
+| 0% | 0% | 100% | 100% | 150% |
+| 25% | 25% | 125% | 125% | 175% |
+| 50% | 50% | 150% | 150% | 200% |
+| 75% | 75% | 175% | 175% | 225% |
+| 100% | 100% | 200% | 200% | 250% |
+| 125% | 100% | 200% | 200% | 250% |
+| 150% | 100% | 200% | 200% | 250% |
+| 175% | 100% | 200% | 200% | 250% |
+| 200% | 100% | 200% | **250%** | **300%** |
 
-- **Fidelidade à planilha** — o gestor confere os dois e bate. Mas replicamos
-  um comportamento que contradiz a norma e penaliza escolas de alto desempenho.
-- **Regra cumulativa** — coerente com o texto normativo, porém o simulador web
-  passa a dizer 300% onde a planilha diz 200%, e a SEPLAG recebe contestações.
+Três leituras que o produto precisa comunicar:
 
-Não é uma decisão de engenharia. Recomendamos levar a §5.1 ao Núcleo da SEPLAG
-(Zaplag (81) 98494-4837, contato da nota 6 da planilha) antes de codificar.
-Qualquer que seja a resposta, a fórmula escolhida deve ficar isolada em uma
-única função, com a tabela acima como teste de regressão.
+1. **300% só existe em uma combinação**: IDEPE de 200% + as duas metas de
+   equidade + participação. Não há valores entre 250% e 300%.
+2. **IDEPE acima de 100% é irrelevante** fora dessa combinação: 125%, 150%,
+   175% e 200% rendem a mesma cota que 100%.
+3. **Ter os dois bônus vale o mesmo que ter um só**, exceto naquela combinação.
+
+Cotas distintas possíveis em `C45`: 0%, 25%, 50%, 75%, 100%, 125%, 150%, 175%,
+200% e 250%.

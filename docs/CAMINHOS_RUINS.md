@@ -69,31 +69,56 @@ um resultado errado sem nenhum sinal.
 *Mitigação recomendada:* deixar explícito em cada tela que o simulador trabalha
 com **IDEPE/SAEPE**, e não com IDEB/SAEB.
 
-### A8. Arredondamento na borda de faixa — [Aberto]
+### A8. Arredondamento na borda de faixa — [Mitigado]
 `H47` é arredondado a 4 casas. Uma diferença de 0,09999 dá 100%; 0,1 dá 125%.
 A distância entre duas telas do wizard pode valer 25 pontos percentuais.
 
-*Mitigação recomendada:* replicar o `ROUND(...; 4)` da planilha (não o
-arredondamento padrão do float) e, quando a média ficar a menos de 0,01 da
-próxima faixa, emitir um item em `alertas`.
+*Mitigação:* `arredondar_excel()` replica o `ROUND(...; 4)` da planilha, que é
+metade-para-longe-do-zero — o `round()` do Python é bancário e cairia na faixa
+errada em `0,09995`. E o ponderador usa as diferenças **cruas**, arredondando
+só o quociente, como faz `H47`. Quando a média fica a menos de 0,01 da próxima
+faixa, entra um item em `alertas`.
 
 ---
 
 ## B. Interpretação da regra
 
-### B1. Assumir que os bônus são cumulativos — [Decisão]
+### B1. Assumir que os bônus são cumulativos — [Mitigado]
 A regra declarada diz "independentes e cumulativos". A fórmula `C45` da planilha
 usa `OR`: ter equidade **e** elementares vale o mesmo que ter só um, salvo quando
 o IDEPE é exatamente 200%. Divergem 20 das 28 combinações.
 
-**O código hoje no repositório implementa a versão cumulativa e, portanto, não
-bate com a planilha que o gestor tem aberta na outra janela.** Detalhes e tabela
-completa em `EXTRACAO_PLANILHA.md` §5.1. Decisão de negócio, não de engenharia.
+*Mitigação:* decidido reproduzir a planilha, por ser mecanismo já validado e em
+uso. `calcular_cota_bde()` implementa `C45` na forma reduzida de 3 ramos,
+equivalente à literal de 4 (o 3º ramo é inalcançável **e** redundante).
+Conferido nas 36 combinações da tabela-verdade de `EXTRACAO_PLANILHA.md` §6.
 
-### B2. Esperar que desempenho acima da meta sempre aumente a cota — [Decisão]
+### B2. Esperar que desempenho acima da meta sempre aumente a cota — [Mitigado]
 Em `C45`, `B41` (cota além do resultado) é descartada no caminho normal. Sem
 bônus, 200% de IDEPE rende exatamente o mesmo que 100%. É o caminho mais
 provável de contestação: a escola que mais superou a meta não vê diferença.
+
+*Mitigação:* a `memoria_calculo` diz explicitamente que a cota além do resultado
+não entrou no total e por quê, e os `alertas` avisam quando a cota de resultado
+já está no teto. O número continua o da planilha; o que muda é o gestor saber
+disso antes de contestar.
+
+### B2b. Prometer valores intermediários entre 250% e 300% — [Mitigado]
+`C45` produz apenas 10 cotas distintas, e o salto de 250% para 300% não tem
+nenhum degrau no meio. Um frontend com barra de progresso contínua, ou um texto
+do tipo "faltam 20% para o teto", inventa uma granularidade que a regra não tem.
+
+*Mitigação:* os `alertas` dizem a condição exata e completa do teto (IDEPE de
+200% + as duas metas de equidade + participação), em vez de uma distância.
+
+### B2c. Orientar a escola a "superar mais a meta" — [Mitigado]
+Conselho intuitivo e quase sempre inútil: entre 100% e 200% de IDEPE a cota não
+muda, salvo se a escola também tiver as duas metas de equidade. Uma escola em
+125% ganha muito mais perseguindo a meta de equidade (+100 pontos) do que
+subindo o IDEPE.
+
+*Mitigação:* quando a cota de resultado está no teto, os `alertas` dizem isso e
+apontam onde o ganho ainda existe.
 
 ### B3. Tratar a participação como eliminatória — [Mitigado]
 "Gatilho de participação" sugere que abaixo de 80% a escola perde tudo. Não é o
@@ -102,12 +127,13 @@ caso: é uma **cota parcial adicional** que soma 50% ao resultado.
 *Mitigação:* o campo se chama `participacao_minima_atingida` e aparece na saída
 como `cota_participacao`, somando — nunca multiplicando ou zerando.
 
-### B4. Fixar 50% como o valor eterno da cota de participação — [Aberto]
+### B4. Fixar 50% como o valor eterno da cota de participação — [Mitigado]
 No ciclo BDE 2025 (resultados de 2024) essa cota foi de **25%**. O percentual
 muda entre ciclos.
 
-*Mitigação recomendada:* constante nomeada e versionada por ciclo, em um único
-lugar. Nunca um literal `0.5` espalhado pelo serviço.
+*Mitigação:* `COTA_PARTICIPACAO`, `COTA_EQUIDADE` e `COTA_ELEMENTARES` são
+constantes nomeadas no topo de `service.py`, com o registro do valor do ciclo
+anterior. Nenhum literal `0.5` espalhado pelo serviço.
 
 ### B5. Esperar o valor em reais — [Mitigado]
 O gestor vai perguntar "quanto eu vou receber?". O simulador só produz o
@@ -142,13 +168,13 @@ meio montado.
 montagem incremental é responsabilidade do frontend. O 422 do Pydantic aponta o
 campo exato.
 
-### C2. Router engolindo exceções — [Aberto]
+### C2. Router engolindo exceções — [Mitigado]
 `router.py` tem `except Exception` convertendo qualquer erro em 422. Um bug de
 divisão por zero vira "erro de validação" para o usuário e some do log.
 
-*Mitigação recomendada:* remover o `try/except`. O `RequestSchema` já garante as
-pré-condições; o que passar dele e quebrar é bug nosso e deve virar 500 com
-stack trace.
+*Mitigação:* `try/except` removido. O `RequisicaoBDE` já garante as
+pré-condições e devolve 422 apontando o campo; o que passar dele e quebrar vira
+500 com stack trace, como deve.
 
 ### C3. `allow_origins=["*"]` em produção — [Aberto]
 Aceitável em desenvolvimento; em produção permite que qualquer site incorpore o
@@ -204,9 +230,10 @@ regras foram transcritas para código e auditadas em `EXTRACAO_PLANILHA.md`.
 
 | # | Item | Estado |
 |---|---|---|
-| B1 | `OR` vs. bônus cumulativos em `C45` | **Decisão — bloqueia o service** |
-| B2 | Cota além do resultado descartada | **Decisão — bloqueia o service** |
-| A8 | Buraco da faixa (−0,3; −0,2) em `H45` | **Decisão** (recomendado: seguir a regra) |
-| C2 | `except Exception` no router | Aberto, correção trivial |
-| B4 | Cota de participação fixada em 50% | Aberto, extrair para constante de ciclo |
+| B1 | `OR` vs. bônus cumulativos em `C45` | Decidido: reproduzir a planilha |
+| B2 | Cota além do resultado descartada | Decidido: reproduzir, com aviso ao gestor |
+| A8 | Buraco da faixa (−0,3; −0,2) em `H45` | Decidido: reproduzir, com alerta explícito |
+| — | Confirmar o buraco da faixa com o Núcleo da SEPLAG | **Aberto — fora do código** |
+| B4 | Cota de participação fixada em 50% | Mitigado: constante nomeada por ciclo |
 | C3 | CORS liberado | Aberto, antes de produção |
+| C7 | Tabela de conversão duplicada no frontend | Aberto: expor a tabela como endpoint |
