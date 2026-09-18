@@ -1,6 +1,6 @@
 """
 Paridade entre o motor Python (src/bde/service.py) e o motor JavaScript
-embarcado em web/index.html.
+embarcado em index.html.
 
 Os dois motores existem porque o Google Sites não hospeda backend: a página é
 estática e calcula no navegador. Duas implementações da mesma fórmula divergem
@@ -27,10 +27,10 @@ sys.path.insert(0, str(RAIZ))
 from src.bde.schemas import EtapaIDEPE, RequisicaoBDE  # noqa: E402
 from src.bde.service import calcular_bde  # noqa: E402
 
-PAGINA = RAIZ / "web" / "index.html"
+PAGINA = RAIZ / "index.html"
 
 # O motor JS termina onde começa o wizard; daí para baixo o código toca o DOM.
-MARCA_FIM_DO_MOTOR = "WIZARD"
+MARCA_FIM_DO_MOTOR = "Wizard BDE"
 
 
 def extrair_motor_js() -> str:
@@ -49,8 +49,15 @@ def extrair_motor_js() -> str:
 
 
 def normalizar(texto: str) -> str:
-    """Tira da comparação o que é só apresentação: vírgula decimal e sinal −."""
-    return texto.replace(",", ".").replace("−", "-")
+    """
+    Tira da comparação o que é só apresentação.
+
+    A interface do NGR escreve os nomes das etapas sem acento ("Ensino Medio");
+    o backend usa acento. É rótulo, não regra.
+    """
+    return (
+        texto.replace("é", "e").replace("Ê", "E").replace("ê", "e").replace("í", "i")
+    )
 
 
 def resposta_python(caso: dict) -> dict:
@@ -71,14 +78,22 @@ def resposta_python(caso: dict) -> dict:
     r = calcular_bde(requisicao)
     return {
         "percentual_bde": r.percentual_bde,
+        "percentual_formatado": r.percentual_formatado,
+        "apto": r.apto_a_receber,
         "media": r.media_ponderada_diferenca,
         "idepe": r.percentual_idepe,
         "cota_resultado": r.cota_resultado,
-        "cota_alem": r.cota_alem_resultado,
-        "cota_equidade": r.cota_equidade,
-        "cota_elementares": r.cota_elementares,
-        "cota_participacao": r.cota_participacao,
-        "alertas": [normalizar(a) for a in r.alertas],
+        "equidade": r.cota_equidade,
+        "elementares": r.cota_elementares,
+        "participacao": r.cota_participacao,
+        "etapas": [
+            {
+                "nome": normalizar(e.nome),
+                "variacao": e.diferenca,
+                "atingimento": e.percentual_atingimento,
+            }
+            for e in r.etapas
+        ],
     }
 
 
@@ -86,35 +101,41 @@ def respostas_js(casos: list[dict]) -> list[dict]:
     runner = f"""
 {extrair_motor_js()}
 
-const NOMES = {{
-  anos_iniciais: "Anos Iniciais",
-  anos_finais: "Anos Finais",
-  ensino_medio: "Ensino Médio",
+// O motor JS fala a lingua do payload que o wizard monta: ai / af / em.
+const CHAVES = {{
+  anos_iniciais: "etapa_ai",
+  anos_finais: "etapa_af",
+  ensino_medio: "etapa_em",
 }};
 
 const casos = JSON.parse(require("fs").readFileSync(process.env.CASOS_JSON, "utf8"));
 const saida = casos.map((caso) => {{
-  const etapas = Object.keys(NOMES)
-    .filter((id) => caso[id])
-    .map((id) => Object.assign({{ etapa: id, nome: NOMES[id] }}, caso[id]));
-
-  const r = calcularBde({{
-    etapas: etapas,
-    reduziuDesigualdade: caso.reduziu_desigualdade,
-    tercoMenorElementares: caso.terco_menor_elementares,
-    participacaoMinimaAtingida: caso.participacao_minima_atingida,
+  const payload = {{
+    reduziu_desigualdade: caso.reduziu_desigualdade,
+    terco_menor_elementares: caso.terco_menor_elementares,
+    participacao_maior_80: caso.participacao_minima_atingida,
+  }};
+  Object.keys(CHAVES).forEach((id) => {{
+    if (caso[id]) payload[CHAVES[id]] = caso[id];
   }});
 
+  const r = simularBde(payload);
+
   return {{
-    percentual_bde: r.percentualBde,
-    media: r.mediaPonderadaDiferenca,
-    idepe: r.percentualIdepe,
-    cota_resultado: r.cotaResultado,
-    cota_alem: r.cotaAlemResultado,
-    cota_equidade: r.cotaEquidade,
-    cota_elementares: r.cotaElementares,
-    cota_participacao: r.cotaParticipacao,
-    alertas: r.alertas.map((a) => a.replace(/,/g, ".").replace(/−/g, "-")),
+    percentual_bde: r.percentual_bde,
+    percentual_formatado: r.percentual_formatado,
+    apto: r.apto_a_receber,
+    media: r.media_ponderada_diferenca,
+    idepe: r.percentual_idepe,
+    cota_resultado: r.cota_resultado,
+    equidade: r.bonus_equidade,
+    elementares: r.bonus_elementares,
+    participacao: r.bonus_participacao,
+    etapas: r.etapas.map((e) => ({{
+      nome: e.nome,
+      variacao: e.variacao,
+      atingimento: e.percentual_atingimento,
+    }})),
   }};
 }});
 

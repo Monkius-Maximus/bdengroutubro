@@ -12,9 +12,10 @@ como subir o FastAPI lá dentro. Não existe configuração que contorne isso.
 Restavam duas saídas, e a escolhida foi a primeira:
 
 1. **Calcular no navegador.** A fórmula do BDE é aritmética sobre meia dúzia de
-   números — não precisa de servidor. `web/index.html` carrega o motor em
-   JavaScript e responde sem rede. Sem hospedagem, sem custo, sem CORS, sem
-   cold start, e a página continua de pé se qualquer serviço externo cair.
+   números — não precisa de servidor. `index.html` é a interface do NGR-SEE
+   com o motor em JavaScript no lugar do `fetch`: mesma tela, mesmo fluxo de 8
+   passos, mesmos cartões de resultado, sem rede. Sem hospedagem, sem custo,
+   sem CORS, sem cold start.
 2. Manter o FastAPI hospedado fora (Render, Fly, Cloud Run) e chamar por
    `fetch`. Descartada: acrescenta um ponto de falha e uma conta a pagar para
    calcular uma média ponderada.
@@ -23,17 +24,39 @@ O backend **não foi removido**. Ele continua sendo a referência auditável da
 regra e o outro lado do teste de paridade (`tests/test_paridade.py`), que é o
 que impede os dois motores de divergirem em silêncio.
 
+## O que mudou da versão FastAPI
+
+| Antes | Agora |
+| --- | --- |
+| `app/templates/index.html` + `static/css` + `static/js` servidos pelo Jinja2 | `index.html` único na raiz, com CSS e JS embutidos |
+| `POST /api/v1/simular-bde` via `fetch` | `simularBde(payload)` local, devolvendo o mesmo formato |
+| `/static/img/logo-ngr.png` (2,1 MB) | `assets/logo-ngr.png` (55 KB, 192 px) |
+| `main.py` servindo a página | `main.py` serve só a API; a página não depende dele |
+
+O fluxo, os textos, as notas de rodapé, os cartões e o selo circular são os do
+sistema original. O que mudou na interface foram três defeitos:
+
+- A barra de progresso pintava o degradê no próprio elemento que cresce, com
+  `background-size: 200%`. Só a primeira metade da escala aparecia, e em tela
+  estreita a barra ficava de uma cor só. Agora o degradê ocupa a trilha inteira
+  e quem anda é o recorte (`clip-path`).
+- `atualizarUI()` reiniciava a animação de entrada a cada clique e a cada campo
+  que perdia o foco — o painel piscava o tempo todo. Agora só anima na troca de
+  passo.
+- O `focusout` disparava o toast de erro ao sair do primeiro campo, com os
+  outros dois ainda vazios. Agora só valida quando os três têm conteúdo.
+
 ## O que a página teve de respeitar
 
-Restrições do embed do Google Sites que moldaram `web/index.html`:
+Restrições do embed do Google Sites que moldaram `index.html`:
 
 | Restrição | Consequência no código |
 | --- | --- |
 | O conteúdo roda dentro de um iframe em origem isolada do Google | `localStorage`, `sessionStorage` e cookies podem simplesmente lançar exceção. A página não usa nenhum dos três: todo o estado vive em memória. |
 | A altura do iframe é fixada no editor e a página não consegue redimensionar o pai | Cada tela do wizard cabe em ~640 px e o que passar disso rola dentro do próprio embed. |
-| O campo "Inserir código" é uma caixa de texto para trechos curtos | Os 34 KB da página não se colam ali. A página é hospedada e o embed é só um `<iframe>` de uma linha. |
+| O campo "Inserir código" é uma caixa de texto para trechos curtos | Os 44 KB da página não se colam ali. A página é hospedada e o embed é só um `<iframe>` de uma linha. |
 | A largura do embed varia com o tema e o dispositivo | Layout fluido, com quebra para coluna única abaixo de 460 px. |
-| Recursos externos podem ser bloqueados ou ficar lentos | Zero dependências: nenhuma fonte do Google Fonts, nenhuma biblioteca de CDN. Um arquivo, nada mais. |
+| Recursos externos podem ser bloqueados ou ficar lentos | Zero dependências: nenhuma fonte do Google Fonts, nenhuma biblioteca de CDN. Só a página e o logo. |
 
 ## Passo a passo
 
@@ -45,8 +68,12 @@ Pelo GitHub Pages, que já é onde o repositório está:
 2. Em *Source*, escolha **Deploy from a branch**; branch `main`, pasta `/ (root)`.
 3. Salve e aguarde o deploy.
 
-A página fica em `https://<usuário>.github.io/<repositório>/web/index.html`.
-Abra esse endereço e confirme que o wizard responde antes de seguir.
+A página fica em `https://monkius-maximus.github.io/bdengroutubro/`.
+
+O `index.html` está na **raiz** do repositório de propósito: o GitHub Pages serve
+`index.html` da raiz nesse endereço direto. Se o arquivo estivesse numa subpasta,
+esse endereço cairia no `README.md` renderizado — que é uma página de
+documentação, não o simulador.
 
 ### 2. Embutir no site
 
@@ -54,13 +81,13 @@ No editor do Google Sites: **Inserir → Incorporar → Código incorporado**, e
 a linha abaixo trocando o endereço pelo do passo anterior.
 
 ```html
-<iframe src="https://SEU-USUARIO.github.io/SEU-REPOSITORIO/web/index.html"
-        style="width:100%;height:760px;border:0" title="Simulador do BDE"></iframe>
+<iframe src="https://monkius-maximus.github.io/bdengroutubro/"
+        style="width:100%;height:900px;border:0" title="Simulador do BDE"></iframe>
 ```
 
 Depois arraste o bloco para ocupar a largura inteira da seção. `height` é o
-único ajuste que costuma ser necessário: a tela de resultado é a mais alta, e
-760 px evita rolagem interna na maioria dos casos.
+único ajuste que costuma ser necessário: a tela de resultado, com os seis
+cartões e as notas de rodapé, é a mais alta.
 
 ## Manutenção
 
@@ -73,5 +100,11 @@ python3 tests/test_paridade.py
 ```
 
 Ele compara 400 casos entre `src/bde/service.py` e o JavaScript de
-`web/index.html`, varrendo os limites de faixa de H45 — onde 0,0001 de
-diferença vale 25 pontos percentuais de bônus.
+`index.html`, varrendo os limites de faixa de H45 — onde 0,0001 de diferença
+vale 25 pontos percentuais de bônus.
+
+Foi exatamente esse tipo de desencontro que quebrou a versão anterior: os
+schemas foram renomeados no backend (`bonus_equidade` → `cota_equidade`,
+`participacao_maior_80` → `participacao_minima_atingida`) sem o frontend junto,
+que morava em outro repositório. O teste existe para que isso reprove aqui em
+vez de aparecer como `NaN%` na tela do gestor.

@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador BDE — NGR-SEE</title>
+    <link rel="icon" type="image/png" href="assets/logo-ngr.png">
+<style>
+/* ============================================================================
+   Wizard BDE — NGR-SEE
+   Fundo off-white, azul principal, verde/amarelo/vermelho para KPIs
+   ============================================================================ */
+
+:root {
+    --bg: #f4f5f0;
+    --card: #ffffff;
+    --azul: #1a3a5c;
+    --azul-claro: #2a6496;
+    --azul-borda: #b8d4e8;
+    --cinza: #6b7280;
+    --cinza-claro: #e5e7eb;
+    --verde: #16a34a;
+    --amarelo: #ca8a04;
+    --vermelho: #dc2626;
+    --verde-bg: #dcfce7;
+    --amarelo-bg: #fef9c3;
+    --vermelho-bg: #fee2e2;
+    --dourado: #ca8a04;
+    --sombra: 0 2px 12px rgba(26, 58, 92, 0.08);
+    --raio: 12px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: #1f2937;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+/* Header */
+.header {
+    text-align: center;
+    padding: 28px 16px 8px;
+}
+.header-logo {
+    height: 48px;
+    margin-bottom: 8px;
+}
+.header h1 {
+    font-size: 1.6rem;
+    color: var(--azul);
+    font-weight: 700;
+}
+.header h1 span { color: var(--azul-claro); }
+.header p {
+    font-size: 0.85rem;
+    color: var(--cinza);
+    margin-top: 2px;
+}
+
+/* Wizard container */
+.wizard-container {
+    width: 100%;
+    max-width: 640px;
+    padding: 0 16px 32px;
+}
+
+/* Progresso */
+.progresso-wrap { margin-bottom: 16px; }
+.progresso-info {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--cinza);
+    margin-bottom: 6px;
+}
+.progresso-barra {
+    width: 100%;
+    height: 6px;
+    background: var(--cinza-claro);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.progresso-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #c0392b 0%, #e67e22 55%, #f0b429 100%);
+    border-radius: 3px;
+    clip-path: inset(0 100% 0 0);
+    transition: clip-path .4s ease;
+}
+
+/* Dots */
+.steps-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--cinza-claro);
+    transition: all .3s ease;
+}
+.dot.completo { background: var(--azul); }
+.dot.ativo {
+    background: var(--azul-claro);
+    transform: scale(1.3);
+    box-shadow: 0 0 0 3px rgba(42, 100, 150, 0.25);
+}
+
+/* Steps */
+.step {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+}
+.pergunta-titulo {
+    font-size: 1.1rem;
+    text-align: center;
+    color: var(--azul);
+    margin-bottom: 20px;
+    line-height: 1.4;
+}
+
+/* Opcoes */
+.opcoes {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+}
+.opcao-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--card);
+    border: 2px solid var(--cinza-claro);
+    border-radius: var(--raio);
+    padding: 16px;
+    cursor: pointer;
+    transition: all .2s ease;
+    box-shadow: var(--sombra);
+}
+.opcao-card:hover {
+    border-color: var(--azul-claro);
+    background: #f0f7ff;
+}
+.opcao-card.selecionado {
+    border-color: var(--azul);
+    background: #e8f0fe;
+}
+.opcao-card .icone-svg {
+    width: 28px;
+    height: 28px;
+    fill: none;
+    stroke: var(--azul);
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    flex-shrink: 0;
+}
+.opcao-card .texto {
+    flex: 1;
+    font-size: 0.95rem;
+    color: #374151;
+}
+.opcao-card .check {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--cinza-claro);
+    flex-shrink: 0;
+    transition: all .2s ease;
+}
+.opcao-card.selecionado .check {
+    background: var(--azul);
+    border-color: var(--azul);
+}
+
+/* Inputs */
+.input-grupo {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 100%;
+}
+.input-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+.input-campo label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--azul);
+}
+.input-campo input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--cinza-claro);
+    border-radius: 8px;
+    font-size: 1rem;
+    color: #1f2937;
+    background: var(--card);
+    transition: border-color .2s;
+}
+.input-campo input:focus {
+    outline: none;
+    border-color: var(--azul-claro);
+    box-shadow: 0 0 0 3px rgba(42, 100, 150, 0.15);
+}
+
+/* Perguntas com Sim/Nao (Step 4 equidade) */
+.pergunta-bloco {
+    width: 100%;
+    background: var(--card);
+    border: 2px solid var(--cinza-claro);
+    border-radius: var(--raio);
+    padding: 16px;
+    margin-bottom: 12px;
+    box-shadow: var(--sombra);
+}
+.pergunta-item {
+    font-size: 0.95rem;
+    color: #374151;
+    margin-bottom: 12px;
+    line-height: 1.4;
+}
+.botoes-simnao {
+    display: flex;
+    gap: 10px;
+}
+.btn-simnao {
+    flex: 1;
+    padding: 10px 0;
+    border: 2px solid var(--cinza-claro);
+    border-radius: 8px;
+    background: white;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s ease;
+    color: var(--cinza);
+}
+.btn-simnao:hover {
+    border-color: var(--azul-claro);
+    color: var(--azul);
+}
+.btn-simnao.selecionado {
+    border-color: var(--azul);
+    background: var(--azul);
+    color: white;
+}
+
+/* Navegacao */
+.navegacao {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 24px;
+    gap: 12px;
+}
+.btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+.btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+.btn-proximo {
+    background: var(--azul);
+    color: white;
+    margin-left: auto;
+}
+.btn-proximo:hover:not(:disabled) { background: var(--azul-claro); }
+.btn-voltar {
+    background: white;
+    color: var(--azul);
+    border: 2px solid var(--azul-borda);
+}
+.btn-voltar:hover { background: #f0f7ff; }
+.btn-resultado {
+    background: var(--azul);
+    color: white;
+    margin-left: auto;
+}
+.btn-resultado:hover { background: var(--azul-claro); }
+
+/* Toast erro */
+.toast-erro {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--vermelho);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    opacity: 0;
+    transition: all .3s ease;
+    z-index: 100;
+    pointer-events: none;
+}
+.toast-erro.visivel {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* Footer */
+.footer {
+    width: 100%;
+    max-width: 640px;
+    padding: 16px;
+    font-size: 0.75rem;
+    color: var(--cinza);
+    margin-top: auto;
+}
+.notas-rodape {
+    list-style: decimal;
+    padding-left: 20px;
+    margin-bottom: 12px;
+    line-height: 1.5;
+}
+.notas-rodape li {
+    margin-bottom: 4px;
+}
+.footer-cr {
+    text-align: center;
+    font-weight: 600;
+    color: var(--azul);
+    margin-top: 8px;
+}
+
+/* Animate */
+@keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ============================================================================
+   Resumo (Step 6)
+   ============================================================================ */
+.resumo-container {
+    width: 100%;
+}
+.resumo-titulo {
+    font-size: 1.15rem;
+    color: var(--azul);
+    margin-bottom: 16px;
+    text-align: center;
+}
+.resumo-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+.resumo-item.sim {
+    background: var(--verde-bg);
+    border-left: 4px solid var(--verde);
+}
+.resumo-item.nao {
+    background: var(--vermelho-bg);
+    border-left: 4px solid var(--vermelho);
+}
+.resumo-icone {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    color: white;
+}
+.resumo-item.sim .resumo-icone { background: var(--verde); }
+.resumo-item.nao .resumo-icone { background: var(--vermelho); }
+.resumo-texto { flex: 1; line-height: 1.3; }
+.resumo-texto strong { color: var(--azul); }
+.resumo-motivo {
+    margin-top: 16px;
+    padding: 14px;
+    background: #e8f0fe;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    border-left: 4px solid var(--azul);
+}
+.resumo-motivo strong { color: var(--azul); }
+
+/* ============================================================================
+   Resultado (Step 7)
+   ============================================================================ */
+.resultado-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.resultado-badge {
+    width: 140px;
+    height: 140px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 20px rgba(22, 163, 74, 0.3);
+    margin-bottom: 16px;
+}
+.badge-nao-apto {
+    box-shadow: 0 4px 20px rgba(220, 38, 38, 0.3);
+    opacity: 0.85;
+}
+.resultado-badge .percentual {
+    font-size: 2.2rem;
+    font-weight: 800;
+    line-height: 1;
+}
+.resultado-badge .label-pct {
+    font-size: 0.8rem;
+    font-weight: 600;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+.resultado-titulo {
+    font-size: 1.2rem;
+    color: var(--azul);
+    text-align: center;
+    margin-bottom: 6px;
+}
+.resultado-subtitulo {
+    font-size: 0.85rem;
+    color: var(--cinza);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+/* Detalhes grid */
+.detalhes-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 16px;
+}
+.detalhe-card {
+    background: var(--card);
+    border-radius: 10px;
+    padding: 12px 8px;
+    text-align: center;
+    box-shadow: var(--sombra);
+}
+.detalhe-valor {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--azul);
+}
+.detalhe-valor.positivo { color: var(--verde); }
+.detalhe-valor.negativo { color: var(--vermelho); }
+.detalhe-valor.negativo-bg { color: var(--cinza); }
+.detalhe-valor.neutro { color: var(--amarelo); }
+.detalhe-label {
+    font-size: 0.7rem;
+    color: var(--cinza);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+/* Etapas detalhe */
+.etapas-detalhe {
+    width: 100%;
+    margin-top: 12px;
+}
+.etapa-detalhe {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background: var(--card);
+    border-radius: 8px;
+    margin-bottom: 6px;
+    box-shadow: var(--sombra);
+}
+.etapa-nome {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--azul);
+}
+.etapa-variacao {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.etapa-variacao.positivo { color: var(--verde); }
+.etapa-variacao.neutro { color: var(--amarelo); }
+.etapa-variacao.negativo { color: var(--vermelho); }
+
+/* Botao reiniciar */
+.btn-reiniciar {
+    margin-top: 20px;
+    background: var(--azul);
+    color: white;
+    padding: 12px 28px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .2s;
+}
+.btn-reiniciar:hover { background: var(--azul-claro); }
+</style>
+</head>
+<body>
+
+
+    <header class="header">
+        <img src="assets/logo-ngr.png" alt="NGR-SEE" class="header-logo" onerror="this.style.display='none'">
+        <h1>Simulador <span>BDE</span></h1>
+        <p>Bonus de Desempenho Educacional — Pernambuco 2026</p>
+    </header>
+
+    <main class="wizard-container" id="wizard">
+
+        <div class="progresso-wrap">
+            <div class="progresso-info">
+                <span class="etapa-label" id="lbl-etapa">Passo 1 de 8</span>
+                <span class="pct-label" id="lbl-progresso">0%</span>
+            </div>
+            <div class="progresso-barra">
+                <div class="progresso-fill" id="barra-progresso"></div>
+            </div>
+        </div>
+
+        <div class="steps-dots" id="steps-dots"></div>
+
+        <div class="pergunta-area" id="area-conteudo">
+
+            <!-- STEP 0: Etapas -->
+            <div class="step" data-step="0">
+                <h2 class="pergunta-titulo">Quais etapas sua escola <strong>pactuou metas</strong> para 2025?</h2>
+                <div class="opcoes" id="opcoes-etapas">
+                    <div class="opcao-card" data-campo="etapa_ai" onclick="toggleOpcao(this)">
+                        <svg class="icone-svg" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                        <span class="texto">Anos Iniciais (1 ao 5 ano)</span>
+                        <span class="check"></span>
+                    </div>
+                    <div class="opcao-card" data-campo="etapa_af" onclick="toggleOpcao(this)">
+                        <svg class="icone-svg" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                        <span class="texto">Anos Finais (6 ao 9 ano)</span>
+                        <span class="check"></span>
+                    </div>
+                    <div class="opcao-card" data-campo="etapa_em" onclick="toggleOpcao(this)">
+                        <svg class="icone-svg" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                        <span class="texto">Ensino Medio (1 ao 3 ano)</span>
+                        <span class="check"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 1: AI -->
+            <div class="step" data-step="1" style="display:none">
+                <h2 class="pergunta-titulo">Informe os dados dos <strong>Anos Iniciais</strong></h2>
+                <div class="input-grupo">
+                    <div class="input-campo">
+                        <label>Matriculas</label>
+                        <input type="number" id="inp-ai-mat" placeholder="Ex: 120" min="1">
+                    </div>
+                    <div class="input-campo">
+                        <label>Meta IDEPE</label>
+                        <input type="number" id="inp-ai-meta" placeholder="Ex: 4.50" step="0.01" min="0">
+                    </div>
+                    <div class="input-campo">
+                        <label>Resultado IDEPE</label>
+                        <input type="number" id="inp-ai-res" placeholder="Ex: 4.70" step="0.01" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: AF -->
+            <div class="step" data-step="2" style="display:none">
+                <h2 class="pergunta-titulo">Informe os dados dos <strong>Anos Finais</strong></h2>
+                <div class="input-grupo">
+                    <div class="input-campo">
+                        <label>Matriculas</label>
+                        <input type="number" id="inp-af-mat" placeholder="Ex: 200" min="1">
+                    </div>
+                    <div class="input-campo">
+                        <label>Meta IDEPE</label>
+                        <input type="number" id="inp-af-meta" placeholder="Ex: 4.50" step="0.01" min="0">
+                    </div>
+                    <div class="input-campo">
+                        <label>Resultado IDEPE</label>
+                        <input type="number" id="inp-af-res" placeholder="Ex: 4.45" step="0.01" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: EM -->
+            <div class="step" data-step="3" style="display:none">
+                <h2 class="pergunta-titulo">Informe os dados do <strong>Ensino Medio</strong></h2>
+                <div class="input-grupo">
+                    <div class="input-campo">
+                        <label>Matriculas</label>
+                        <input type="number" id="inp-em-mat" placeholder="Ex: 300" min="1">
+                    </div>
+                    <div class="input-campo">
+                        <label>Meta IDEPE</label>
+                        <input type="number" id="inp-em-meta" placeholder="Ex: 5.00" step="0.01" min="0">
+                    </div>
+                    <div class="input-campo">
+                        <label>Resultado IDEPE</label>
+                        <input type="number" id="inp-em-res" placeholder="Ex: 5.10" step="0.01" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: Equidade — duas perguntas independentes -->
+            <div class="step" data-step="4" style="display:none">
+                <h2 class="pergunta-titulo">Responda sobre as <strong>Metas de Equidade</strong></h2>
+
+                <div class="pergunta-bloco">
+                    <p class="pergunta-item">Houve evolucao dos estudantes PPI e de renda/NSE baixa no SAEPE 2025?</p>
+                    <div class="botoes-simnao">
+                        <button type="button" class="btn-simnao" data-campo="reduziu_desigualdade" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
+                        <button type="button" class="btn-simnao" data-campo="reduziu_desigualdade" data-valor="false" onclick="toggleSimNaoPergunta(this)">Nao</button>
+                    </div>
+                </div>
+
+                <div class="pergunta-bloco">
+                    <p class="pergunta-item">Sua escola esta no 1 terco com menor % de estudantes nos padroes elementares?</p>
+                    <div class="botoes-simnao">
+                        <button type="button" class="btn-simnao" data-campo="terco_menor_elementares" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
+                        <button type="button" class="btn-simnao" data-campo="terco_menor_elementares" data-valor="false" onclick="toggleSimNaoPergunta(this)">Nao</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 5: Participacao -->
+            <div class="step" data-step="5" style="display:none">
+                <h2 class="pergunta-titulo">A escola atingiu <strong>participacao &ge; 80%</strong> em todos os componentes e etapas avaliados no SAEPE?</h2>
+                <div class="opcoes">
+                    <div class="opcao-card" data-campo="participacao_maior_80" onclick="toggleSimNao(this, true)">
+                        <svg class="icone-svg" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                        <span class="texto">Sim, atingiu participacao igual ou superior a 80%</span>
+                        <span class="check"></span>
+                    </div>
+                    <div class="opcao-card" data-campo="participacao_maior_80" onclick="toggleSimNao(this, false)">
+                        <svg class="icone-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
+                        <span class="texto">Nao atingiu 80% de participacao</span>
+                        <span class="check"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 6: Resumo -->
+            <div class="step" data-step="6" style="display:none">
+                <div class="resumo-container" id="resumo-area"></div>
+            </div>
+
+            <!-- STEP 7: Resultado -->
+            <div class="step" data-step="7" style="display:none">
+                <div class="resultado-container" id="resultado-area"></div>
+            </div>
+
+        </div>
+
+        <div class="navegacao" id="navegacao">
+            <button class="btn btn-voltar" id="btn-voltar" onclick="voltar()" style="display:none">Voltar</button>
+            <button class="btn btn-proximo" id="btn-proximo" onclick="proximo()" disabled>Proximo</button>
+        </div>
+
+    </main>
+
+    <div class="toast-erro" id="toast-erro"></div>
+
+    <footer class="footer">
+        <ol class="notas-rodape">
+            <li>Este simulador foi desenvolvido pelo Nucleo da Seplag com o objetivo de esclarecer duvidas sobre o atingimento das Metas 2025. Ressalta-se que os resultados apresentados nao sao oficiais.</li>
+            <li>Pequenas diferencas podem ocorrer devido a arredondamentos.</li>
+            <li>As metas foram projetadas considerando o contexto de cada escola e estao descritas no Termo de Compromisso (Escola/GRE/SEE).</li>
+            <li>O atingimento de cada etapa e calculado pela diferenca entre o resultado obtido e a meta estabelecida. A cota do BDE nao esta considerada neste calculo. Para consultar o percentual, acesse a aba "Cenario Validado".</li>
+            <li>Para escolas com mais de uma etapa, o atingimento e calculado de forma ponderada, considerando a quantidade de estudantes em cada etapa.</li>
+            <li>Em caso de duvidas ou identificacao de possiveis inconsistencias, entre em contato pelo Zaplag: (81) 98494-4837.</li>
+        </ol>
+        <p class="footer-cr">Nucleo de Gestao Regional — SEE/PE</p>
+    </footer>
+
+
+<script>
+/* ============================================================================
+   Motor BDE — porte de src/bde/service.py para o navegador.
+
+   O Google Sites e hospedagem estatica: nao roda Python, nao roda o FastAPI.
+   Este motor substitui a chamada a /api/v1/simular-bde e devolve exatamente o
+   mesmo formato que a API devolvia, para que o wizard nao precise saber de
+   onde veio o resultado.
+
+   Cadeia de calculo, na ordem da planilha:
+
+     B21/B29/B37  diferenca por etapa = resultado - meta (sem arredondar)
+     H47          media ponderada pelas matriculas, ROUND(...; 4)
+     H45          conversao da media em percentual de atingimento
+     B40 / B41    cota resultado = min(H45; 1) / cota alem = H45 - B40
+     B42 / B43    cotas de equidade e de elementares
+     B44          cota de participacao
+     C45          cota total do BDE
+
+   Divergencias conhecidas da planilha em relacao a regra escrita, reproduzidas
+   por decisao de negocio:
+
+     - As cotas de equidade e elementares nao sao cumulativas: C45 usa OR.
+     - H45 devolve 0% para diferencas entre -0,3 e -0,2.
+
+   Detalhes e tabela-verdade em docs/EXTRACAO_PLANILHA.md.
+   ============================================================================ */
+
+var COTA_EQUIDADE = 1.0;
+var COTA_ELEMENTARES = 1.0;
+var COTA_PARTICIPACAO = 0.5;
+
+// Faixas da validacao de dados da planilha (B6:B8 e B19/B20 etc.).
+var MATRICULAS_MIN = 8;
+var MATRICULAS_MAX = 50000;
+var IDEPE_MIN = 1.5;
+var IDEPE_MAX = 9.2;
+
+var NOMES_ETAPAS = {
+    ai: 'Anos Iniciais',
+    af: 'Anos Finais',
+    em: 'Ensino Medio',
+};
+
+/**
+ * ROUND(valor; 4) do Excel — empate vai para longe do zero.
+ *
+ * Math.round sozinho arredonda meio-para-cima (em direcao a +infinito), o que
+ * erra o sinal nos negativos; por isso o calculo roda no valor absoluto. O
+ * toPrecision(12) descarta o residuo binario da subtracao: 4,59995 - 4,5 nao
+ * da 0,09995, da 0,09994999999999976, que cairia na faixa de 100% em vez de
+ * 125%.
+ */
+function arredondarExcel(valor) {
+    var sinal = valor < 0 ? -1 : 1;
+    var escalado = Number((Math.abs(valor) * 1e4).toPrecision(12));
+    return (sinal * Math.round(escalado)) / 1e4;
+}
+
+/**
+ * Formula H45. Recebe a diferenca ja arredondada por arredondarExcel.
+ *
+ * A ordem dos testes reproduz a escada de IFs da planilha, inclusive o trecho
+ * em que ela devolve 0 em vez de ler 0,25 da grade E42:M43.
+ */
+function converterDiferencaEmPercentual(diferenca) {
+    if (diferenca < -0.3) return 0.00;
+    if (diferenca === -0.3) return 0.25;  // unica diferenca que rende 25% em H45
+    if (diferenca < -0.2) return 0.00;    // buraco de H45, reproduzido por decisao de negocio
+    if (diferenca < -0.1) return 0.50;
+    if (diferenca < 0.0) return 0.75;
+    if (diferenca < 0.1) return 1.00;
+    if (diferenca < 0.2) return 1.25;
+    if (diferenca < 0.3) return 1.50;
+    if (diferenca < 0.4) return 1.75;
+    return 2.00;
+}
+
+/**
+ * Formula C45, sem a parcela B44.
+ *
+ * Forma reduzida de 3 ramos. O 3o ramo da planilha e inalcancavel (B40 e
+ * min(H45; 1), logo B40<=1 e sempre verdadeiro) e tambem redundante: quando
+ * valeria, devolveria 2, o mesmo que 1+B40 com B40=1.
+ */
+function calcularCotaBde(percentualIdepe, temEquidade, temElementares) {
+    var cotaResultado = Math.min(percentualIdepe, 1.0);             // B40
+    var cotaAlem = Math.max(percentualIdepe - cotaResultado, 0.0);  // B41
+
+    if (cotaResultado === 1.0 && cotaAlem === 1.0 && temEquidade && temElementares) {
+        return 2.5;
+    }
+    if (temEquidade || temElementares) {
+        return 1.0 + cotaResultado;
+    }
+    return cotaResultado;
+}
+
+/**
+ * Substitui o POST /api/v1/simular-bde. Recebe e devolve os mesmos formatos.
+ */
+function simularBde(payload) {
+    var etapas = [];
+    ['ai', 'af', 'em'].forEach(function (chave) {
+        var dados = payload['etapa_' + chave];
+        if (dados) {
+            etapas.push({
+                chave: chave,
+                nome: NOMES_ETAPAS[chave],
+                matriculas: dados.matriculas,
+                meta: dados.meta,
+                resultado: dados.resultado,
+            });
+        }
+    });
+
+    if (etapas.length === 0) {
+        throw new Error(
+            'Informe ao menos uma etapa pactuada. Escola sem meta pactuada nao ' +
+            'e elegivel ao BDE.'
+        );
+    }
+
+    // H47 — a planilha pondera as diferencas CRUAS e arredonda so o quociente.
+    var totalMatriculas = etapas.reduce(function (s, e) { return s + e.matriculas; }, 0);
+    var somaPonderada = etapas.reduce(function (s, e) {
+        return s + (e.resultado - e.meta) * e.matriculas;
+    }, 0);
+    var mediaPonderada = arredondarExcel(somaPonderada / totalMatriculas);
+
+    // H45 -> B40
+    var percentualIdepe = converterDiferencaEmPercentual(mediaPonderada);
+    var cotaResultado = Math.min(percentualIdepe, 1.0);
+
+    // B42 / B43 / B44
+    var bonusEquidade = payload.reduziu_desigualdade ? COTA_EQUIDADE : 0.0;
+    var bonusElementares = payload.terco_menor_elementares ? COTA_ELEMENTARES : 0.0;
+    var bonusParticipacao = payload.participacao_maior_80 ? COTA_PARTICIPACAO : 0.0;
+
+    // C45
+    var cotaBdeCalculada = calcularCotaBde(
+        percentualIdepe,
+        payload.reduziu_desigualdade,
+        payload.terco_menor_elementares
+    );
+    var percentualBde = cotaBdeCalculada + bonusParticipacao;
+
+    return {
+        percentual_bde: percentualBde,
+        percentual_formatado: Math.round(percentualBde * 100) + '%',
+        apto_a_receber: percentualBde > 0.0,
+        media_ponderada_diferenca: mediaPonderada,
+        percentual_idepe: percentualIdepe,
+        cota_resultado: cotaResultado,
+        cota_bde_calculada: cotaBdeCalculada,
+        bonus_equidade: bonusEquidade,
+        bonus_elementares: bonusElementares,
+        bonus_participacao: bonusParticipacao,
+        etapas: etapas.map(function (e) {
+            // A variacao exibida e arredondada porque, numa escola de etapa
+            // unica, H47 reduz a ROUND(B21; 4) — e o numero que o gestor ve na
+            // planilha.
+            var variacao = arredondarExcel(e.resultado - e.meta);
+            return {
+                nome: e.nome,
+                matriculas: e.matriculas,
+                meta: e.meta,
+                resultado: e.resultado,
+                variacao: variacao,
+                percentual_atingimento: converterDiferencaEmPercentual(variacao),
+            };
+        }),
+    };
+}
+
+/* ============================================================================
+   Wizard BDE — Navegacao, API e Gamificacao
+   ============================================================================ */
+
+const estado = {
+    stepAtual: 0,
+    totalSteps: 8,
+    resultadoApi: null,
+    respostas: {
+        etapas_selecionadas: [],
+        etapa_ai: null,
+        etapa_af: null,
+        etapa_em: null,
+        reduziu_desigualdade: null,
+        terco_menor_elementares: null,
+        participacao_maior_80: null,
+    },
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    renderizarDots();
+    atualizarUI();
+});
+
+function renderizarDots() {
+    const c = document.getElementById('steps-dots');
+    c.innerHTML = '';
+    for (let i = 0; i < estado.totalSteps; i++) {
+        const d = document.createElement('div');
+        d.className = 'dot';
+        d.id = `dot-${i}`;
+        c.appendChild(d);
+    }
+}
+
+let ultimoStepAnimado = null;
+
+function atualizarUI() {
+    const { stepAtual, totalSteps } = estado;
+    const percentual = Math.round((stepAtual / (totalSteps - 1)) * 100);
+
+    const barra = document.getElementById('barra-progresso');
+    barra.style.clipPath = `inset(0 ${100 - percentual}% 0 0)`;
+
+    document.getElementById('lbl-etapa').textContent = `Passo ${stepAtual + 1} de ${totalSteps}`;
+    document.getElementById('lbl-progresso').textContent = `${percentual}%`;
+
+    for (let i = 0; i < totalSteps; i++) {
+        const dot = document.getElementById(`dot-${i}`);
+        if (!dot) continue;
+        dot.className = 'dot';
+        if (i < stepAtual) dot.classList.add('completo');
+        if (i === stepAtual) dot.classList.add('ativo');
+    }
+
+    document.querySelectorAll('.step').forEach(s => s.style.display = 'none');
+    const stepEl = document.querySelector(`.step[data-step="${stepAtual}"]`);
+    if (stepEl) {
+        stepEl.style.display = 'flex';
+        stepEl.style.flexDirection = 'column';
+        stepEl.style.justifyContent = 'center';
+        if (stepAtual !== ultimoStepAnimado) {
+            stepEl.style.animation = 'none';
+            stepEl.offsetHeight;
+            stepEl.style.animation = 'fadeSlideUp .35s ease-out';
+            ultimoStepAnimado = stepAtual;
+        }
+    }
+
+    const btnVoltar = document.getElementById('btn-voltar');
+    const btnProximo = document.getElementById('btn-proximo');
+
+    const ehResultado = stepAtual === 7;
+    const ehResumo = stepAtual === 6;
+
+    btnVoltar.style.display = stepAtual > 0 && !ehResultado ? 'flex' : 'none';
+
+    if (ehResultado) {
+        btnProximo.style.display = 'none';
+    } else if (ehResumo) {
+        btnProximo.style.display = 'flex';
+        btnProximo.textContent = 'Ver Resultado';
+        btnProximo.className = 'btn btn-resultado';
+        btnProximo.disabled = false;
+        btnProximo.onclick = () => {
+            mostrarResultado(estado.resultadoApi);
+        };
+    } else {
+        btnProximo.style.display = 'flex';
+        btnProximo.textContent = 'Proximo';
+        btnProximo.className = 'btn btn-proximo';
+        btnProximo.disabled = !stepValido(stepAtual);
+        btnProximo.onclick = proximo;
+    }
+}
+
+function stepValido(step) {
+    switch (step) {
+        case 0: return estado.respostas.etapas_selecionadas.length > 0;
+        case 1: return estado.respostas.etapa_ai !== null;
+        case 2: return estado.respostas.etapa_af !== null;
+        case 3: return estado.respostas.etapa_em !== null;
+        case 4:
+            return estado.respostas.reduziu_desigualdade !== null
+                && estado.respostas.terco_menor_elementares !== null;
+        case 5: return estado.respostas.participacao_maior_80 !== null;
+        default: return true;
+    }
+}
+
+function proximo() {
+    if (!stepValido(estado.stepAtual)) return;
+
+    if (estado.stepAtual === 5) {
+        enviarSimulacao();
+        return;
+    }
+
+    estado.stepAtual++;
+    while (devePularStep(estado.stepAtual) && estado.stepAtual < 6) {
+        estado.stepAtual++;
+    }
+    atualizarUI();
+}
+
+function voltar() {
+    if (estado.stepAtual <= 0) return;
+    estado.stepAtual--;
+    while (devePularStep(estado.stepAtual) && estado.stepAtual > 0) {
+        estado.stepAtual--;
+    }
+    atualizarUI();
+}
+
+function devePularStep(step) {
+    if (step === 1) return !estado.respostas.etapas_selecionadas.includes('ai');
+    if (step === 2) return !estado.respostas.etapas_selecionadas.includes('af');
+    if (step === 3) return !estado.respostas.etapas_selecionadas.includes('em');
+    return false;
+}
+
+function toggleOpcao(card) {
+    const campo = card.dataset.campo;
+    card.classList.toggle('selecionado');
+    const chave = campo.replace('etapa_', '');
+    const idx = estado.respostas.etapas_selecionadas.indexOf(chave);
+    if (idx >= 0) {
+        estado.respostas.etapas_selecionadas.splice(idx, 1);
+        estado.respostas[campo] = null;
+    } else {
+        estado.respostas.etapas_selecionadas.push(chave);
+        estado.respostas[campo] = {};
+    }
+    atualizarUI();
+}
+
+function toggleSimNaoPergunta(btn) {
+    const campo = btn.dataset.campo;
+    const valor = btn.dataset.valor === 'true';
+
+    btn.parentElement.querySelectorAll('.btn-simnao').forEach(b => b.classList.remove('selecionado'));
+    btn.classList.add('selecionado');
+
+    estado.respostas[campo] = valor;
+    atualizarUI();
+}
+
+function toggleSimNao(card, valor) {
+    card.parentElement.querySelectorAll('.opcao-card').forEach(c => c.classList.remove('selecionado'));
+    card.classList.add('selecionado');
+    estado.respostas.participacao_maior_80 = valor;
+    atualizarUI();
+}
+
+function validarInputsEtapa(prefixo) {
+    const mat = parseFloat(document.getElementById(`inp-${prefixo}-mat`).value);
+    const meta = parseFloat(document.getElementById(`inp-${prefixo}-meta`).value);
+    const res = parseFloat(document.getElementById(`inp-${prefixo}-res`).value);
+
+    if (isNaN(mat) || mat < MATRICULAS_MIN || mat > MATRICULAS_MAX) {
+        mostrarErro(`Matriculas: informe um numero entre ${MATRICULAS_MIN} e ${MATRICULAS_MAX}.`);
+        return null;
+    }
+    // Faixas da validacao de dados da planilha. "Maior que zero" aceitaria 45
+    // no lugar de 4,5 e a taxa de aprovacao no lugar do indice.
+    if (isNaN(meta) || meta < IDEPE_MIN || meta > IDEPE_MAX) {
+        mostrarErro(`Meta IDEPE: informe um valor entre ${IDEPE_MIN} e ${IDEPE_MAX}.`);
+        return null;
+    }
+    if (isNaN(res) || res < IDEPE_MIN || res > IDEPE_MAX) {
+        mostrarErro(`Resultado IDEPE: informe um valor entre ${IDEPE_MIN} e ${IDEPE_MAX}.`);
+        return null;
+    }
+    return { matriculas: Math.round(mat), meta, resultado: res };
+}
+
+document.addEventListener('focusout', (e) => {
+    if (!e.target.matches('.input-campo input')) return;
+    const step = e.target.closest('.step');
+    if (!step) return;
+    const stepNum = parseInt(step.dataset.step);
+    let prefixo = null;
+    if (stepNum === 1) prefixo = 'ai';
+    if (stepNum === 2) prefixo = 'af';
+    if (stepNum === 3) prefixo = 'em';
+    if (!prefixo) return;
+    // So valida quando os tres campos tem algo digitado: sair de "Matriculas"
+    // para preencher "Meta" nao e erro, e o toast a cada tab era ruido.
+    const preenchidos = ['mat', 'meta', 'res'].every(function (campo) {
+        return document.getElementById(`inp-${prefixo}-${campo}`).value.trim() !== '';
+    });
+    if (!preenchidos) {
+        estado.respostas[`etapa_${prefixo}`] = null;
+        atualizarUI();
+        return;
+    }
+    estado.respostas[`etapa_${prefixo}`] = validarInputsEtapa(prefixo);
+    atualizarUI();
+});
+
+/**
+ * Era um POST para /api/v1/simular-bde. O Google Sites e hospedagem estatica
+ * e nao roda o FastAPI, entao o calculo passou para o motor local, que
+ * devolve exatamente o mesmo formato que a API devolvia.
+ */
+function enviarSimulacao() {
+    const payload = {};
+    if (estado.respostas.etapas_selecionadas.includes('ai')) payload.etapa_ai = estado.respostas.etapa_ai;
+    if (estado.respostas.etapas_selecionadas.includes('af')) payload.etapa_af = estado.respostas.etapa_af;
+    if (estado.respostas.etapas_selecionadas.includes('em')) payload.etapa_em = estado.respostas.etapa_em;
+    payload.reduziu_desigualdade = estado.respostas.reduziu_desigualdade;
+    payload.terco_menor_elementares = estado.respostas.terco_menor_elementares;
+    payload.participacao_maior_80 = estado.respostas.participacao_maior_80;
+
+    try {
+        estado.resultadoApi = simularBde(payload);
+        mostrarResumo();
+    } catch (e) {
+        mostrarErro(e.message);
+    }
+}
+
+function montarResumo() {
+    const r = estado.respostas;
+    const etapasNomes = { ai: 'Anos Iniciais', af: 'Anos Finais', em: 'Ensino Medio' };
+    let html = '<h2 class="resumo-titulo">Resumo das Informacoes</h2>';
+
+    r.etapas_selecionadas.forEach(chave => {
+        const dados = r[`etapa_${chave}`];
+        if (dados) {
+            const variacao = (dados.resultado - dados.meta).toFixed(2);
+            const sinal = parseFloat(variacao) >= 0 ? '+' : '';
+            html += `
+                <div class="resumo-item ${parseFloat(variacao) >= 0 ? 'sim' : 'nao'}">
+                    <div class="resumo-icone">${parseFloat(variacao) >= 0 ? '+' : '-'}</div>
+                    <div class="resumo-texto">
+                        <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | Resultado: ${dados.resultado} | Variacao: ${sinal}${variacao}
+                    </div>
+                </div>`;
+        }
+    });
+
+    const eq = r.reduziu_desigualdade;
+    const el = r.terco_menor_elementares;
+    const part = r.participacao_maior_80;
+
+    html += `
+        <div class="resumo-item ${eq ? 'sim' : 'nao'}">
+            <div class="resumo-icone">${eq ? '+' : '-'}</div>
+            <div class="resumo-texto"><strong>Equidade:</strong> ${eq ? 'Houve evolucao de PPI e renda/NSE' : 'Nao houve evolucao de equidade'}</div>
+        </div>
+        <div class="resumo-item ${el ? 'sim' : 'nao'}">
+            <div class="resumo-icone">${el ? '+' : '-'}</div>
+            <div class="resumo-texto"><strong>Elementares:</strong> ${el ? 'Escola esta no 1 terco com menor % de elementares' : 'Escola nao esta no 1 terco'}</div>
+        </div>
+        <div class="resumo-item ${part ? 'sim' : 'nao'}">
+            <div class="resumo-icone">${part ? '+' : '-'}</div>
+            <div class="resumo-texto"><strong>Participacao:</strong> ${part ? 'Atingiu >= 80% no SAEPE' : 'Nao atingiu 80% de participacao'}</div>
+        </div>`;
+
+    const motivos = [];
+    if (r.etapas_selecionadas.length > 0) {
+        const diffs = r.etapas_selecionadas.map(k => {
+            const d = r[`etapa_${k}`];
+            return d ? d.resultado - d.meta : 0;
+        });
+        const media = diffs.reduce((a, b) => a + b, 0) / diffs.length;
+        if (media >= 0.4) motivos.push('superou a meta em 0.4 pontos ou mais');
+        else if (media >= 0.1) motivos.push('superou a meta');
+        else if (media >= 0) motivos.push('atingiu ou esta proximo da meta');
+        else motivos.push('ficou abaixo da meta');
+    }
+    if (eq) motivos.push('reduziu desigualdades de PPI e renda');
+    if (el) motivos.push('esta entre as escolas com menor % de estudantes nos padroes elementares');
+    if (part) motivos.push('atingiu participacao igual ou superior a 80%');
+
+    if (motivos.length > 0) {
+        html += `
+            <div class="resumo-motivo">
+                <strong>Por que sua escola pode receber o BDE?</strong><br>
+                Porque ${motivos.join(', ')}.
+            </div>`;
+    }
+
+    return html;
+}
+
+function mostrarResumo() {
+    estado.stepAtual = 6;
+    document.getElementById('resumo-area').innerHTML = montarResumo();
+    atualizarUI();
+}
+
+function corKPI(valor) {
+    if (valor >= 2.0) return 'kpi-verde';
+    if (valor >= 1.0) return 'kpi-dourado';
+    return 'kpi-vermelho';
+}
+
+function mostrarResultado(r) {
+    estado.stepAtual = 7;
+    atualizarUI();
+
+    const apto = r.apto_a_receber;
+    const badgeCor = apto
+        ? (r.percentual_bde >= 2.0 ? 'var(--verde)' : r.percentual_bde >= 1.0 ? 'var(--dourado)' : 'var(--amarelo)')
+        : 'var(--vermelho)';
+
+    const clsIdepe = r.percentual_idepe >= 1.0 ? 'positivo' : r.percentual_idepe >= 0.75 ? 'neutro' : 'negativo';
+
+    let etapasHtml = '';
+    if (r.etapas && r.etapas.length > 0) {
+        etapasHtml = '<div class="etapas-detalhe">';
+        r.etapas.forEach(e => {
+            const cls = e.variacao > 0 ? 'positivo' : e.variacao === 0 ? 'neutro' : 'negativo';
+            const sinal = e.variacao > 0 ? '+' : '';
+            etapasHtml += `
+                <div class="etapa-detalhe">
+                    <span class="etapa-nome">${e.nome}</span>
+                    <span class="etapa-variacao ${cls}">${sinal}${e.variacao.toFixed(4)} (${(e.percentual_atingimento * 100).toFixed(0)}%)</span>
+                </div>`;
+        });
+        etapasHtml += '</div>';
+    }
+
+    document.getElementById('resultado-area').innerHTML = `
+        <div class="resultado-badge ${apto ? '' : 'badge-nao-apto'}" style="background: ${badgeCor}; color: white;">
+            <span class="percentual">${r.percentual_formatado}</span>
+            <span class="label-pct">BDE</span>
+        </div>
+        <h2 class="resultado-titulo">${apto ? 'Escola apta a receber o BDE' : 'Escola nao atingiu o minimo'}</h2>
+        <p class="resultado-subtitulo">${apto
+            ? 'Confira o detalhamento do calculo do seu bonus.'
+            : 'A escola nao atingiu percentual minimo para receber o bonus.'}</p>
+        <div class="detalhes-grid">
+            <div class="detalhe-card">
+                <div class="detalhe-valor ${clsIdepe}">${(r.percentual_idepe * 100).toFixed(0)}%</div>
+                <div class="detalhe-label">IDEPE (media)</div>
+            </div>
+            <div class="detalhe-card">
+                <div class="detalhe-valor">${(r.cota_resultado * 100).toFixed(0)}%</div>
+                <div class="detalhe-label">Cota Resultado</div>
+            </div>
+            <div class="detalhe-card">
+                <div class="detalhe-valor ${r.bonus_equidade > 0 ? 'positivo' : 'negativo-bg'}">${(r.bonus_equidade * 100).toFixed(0)}%</div>
+                <div class="detalhe-label">Equidade</div>
+            </div>
+            <div class="detalhe-card">
+                <div class="detalhe-valor ${r.bonus_elementares > 0 ? 'positivo' : 'negativo-bg'}">${(r.bonus_elementares * 100).toFixed(0)}%</div>
+                <div class="detalhe-label">Elementares</div>
+            </div>
+            <div class="detalhe-card">
+                <div class="detalhe-valor ${r.bonus_participacao > 0 ? 'positivo' : 'negativo-bg'}">${(r.bonus_participacao * 100).toFixed(0)}%</div>
+                <div class="detalhe-label">Participacao</div>
+            </div>
+            <div class="detalhe-card">
+                <div class="detalhe-valor">${(r.cota_bde_calculada * 100).toFixed(0)}%</div>
+                <div class="detalhe-label">Cota BDE (antes part.)</div>
+            </div>
+        </div>
+        ${etapasHtml}
+        <button class="btn btn-reiniciar" onclick="reiniciar()">Simular outra escola</button>
+    `;
+}
+
+function reiniciar() {
+    estado.stepAtual = 0;
+    estado.resultadoApi = null;
+    estado.respostas = {
+        etapas_selecionadas: [],
+        etapa_ai: null,
+        etapa_af: null,
+        etapa_em: null,
+        reduziu_desigualdade: null,
+        terco_menor_elementares: null,
+        participacao_maior_80: null,
+    };
+    document.querySelectorAll('.opcao-card').forEach(c => c.classList.remove('selecionado'));
+    document.querySelectorAll('.btn-simnao').forEach(b => b.classList.remove('selecionado'));
+    document.querySelectorAll('.input-campo input').forEach(i => i.value = '');
+    document.getElementById('btn-proximo').style.display = 'flex';
+    document.getElementById('btn-proximo').textContent = 'Proximo';
+    document.getElementById('btn-proximo').className = 'btn btn-proximo';
+    atualizarUI();
+}
+
+function mostrarErro(msg) {
+    const toast = document.getElementById('toast-erro');
+    toast.textContent = msg;
+    toast.classList.add('visivel');
+    setTimeout(() => toast.classList.remove('visivel'), 4000);
+}
+</script>
+</body>
+</html>

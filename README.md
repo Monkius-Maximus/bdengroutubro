@@ -6,9 +6,9 @@ do BDE com a memória de cálculo aberta.
 
 São duas implementações da mesma regra, mantidas idênticas por teste:
 
-- **`web/index.html`** — a página que vai ao ar. Wizard completo, calcula no
-  navegador, sem dependências e sem rede. É o que se publica no Google Sites
-  ([`docs/GOOGLE_SITES.md`](docs/GOOGLE_SITES.md)).
+- **`index.html`** — a interface do NGR-SEE que vai ao ar. Wizard de 8 passos,
+  calcula no navegador, sem dependências e sem rede. É o que se publica no
+  Google Sites ([`docs/GOOGLE_SITES.md`](docs/GOOGLE_SITES.md)).
 - **`main.py` + `src/bde/`** — o backend FastAPI, para quem precisar consumir a
   regra como API. Não é usado pela página.
 
@@ -22,8 +22,7 @@ As decisões estão registradas em [`docs/EXTRACAO_PLANILHA.md`](docs/EXTRACAO_P
 
 ## Como rodar
 
-A página não precisa de nada instalado — basta abrir `web/index.html` no
-navegador.
+A página não precisa de nada instalado — basta abrir `index.html` no navegador.
 
 O backend:
 
@@ -101,7 +100,8 @@ Levantadas da tabela-verdade completa ([`docs/EXTRACAO_PLANILHA.md`](docs/EXTRAC
 ## Estrutura
 
 ```
-web/index.html         página publicável — wizard + motor em JavaScript
+index.html             página publicável — interface NGR-SEE + motor JavaScript
+assets/logo-ngr.png    logo do Núcleo de Gestão Regional
 main.py                aplicação FastAPI e CORS
 src/bde/schemas.py     contrato de entrada e saída (Pydantic)
 src/bde/service.py     motor de cálculo — reprodução de H45, H47 e C45
