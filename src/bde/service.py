@@ -22,7 +22,7 @@ Detalhes e tabela-verdade em docs/EXTRACAO_PLANILHA.md.
 
 from __future__ import annotations
 
-from decimal import ROUND_HALF_UP, Decimal
+from decimal import ROUND_HALF_UP, Context, Decimal
 
 from src.bde.schemas import (
     DetalheEtapa,
@@ -52,16 +52,25 @@ LIMITES_FAIXAS = (-0.3, -0.2, -0.1, 0.0, 0.1, 0.2, 0.3, 0.4)
 MARGEM_ALERTA = 0.01
 
 
+# Dígitos significativos mantidos antes de arredondar. 12 fica bem abaixo dos
+# ~17 de um float e bem acima das 4 casas do resultado: descarta o resíduo
+# binário sem tocar em nenhum dígito que o gestor tenha digitado.
+PRECISAO_SIGNIFICATIVA = Context(prec=12)
+
+
 def arredondar_excel(valor: float) -> float:
     """
     ROUND(valor; 4) do Excel — empate vai para longe do zero.
 
     O round() do Python é bancário e pode cair na faixa errada quando o valor
     encosta num limite: 0,09995 separa 100% de 125%.
+
+    O empate só sobrevive até aqui se o resíduo da subtração for descartado
+    antes: 4,59995 − 4,5 não dá 0,09995 em float, dá 0,09994999999999976, que
+    arredondaria para 0,0999 e devolveria 100% onde a planilha devolve 125%.
     """
-    return float(
-        Decimal(repr(valor)).quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP)
-    )
+    normalizado = PRECISAO_SIGNIFICATIVA.plus(Decimal(repr(valor)))
+    return float(normalizado.quantize(Decimal("0.0001"), rounding=ROUND_HALF_UP))
 
 
 def converter_diferenca_em_percentual(diferenca: float) -> float:

@@ -1,8 +1,16 @@
 # Simulador do BDE — Pernambuco
 
-Backend do simulador do **Bônus de Desempenho Educacional (BDE)** para gestores
-da rede estadual de Pernambuco. Recebe as respostas de um wizard e devolve a
-cota do BDE com a memória de cálculo aberta.
+Simulador do **Bônus de Desempenho Educacional (BDE)** para gestores da rede
+estadual de Pernambuco. Um wizard pergunta os números do IDEPE e devolve a cota
+do BDE com a memória de cálculo aberta.
+
+São duas implementações da mesma regra, mantidas idênticas por teste:
+
+- **`web/index.html`** — a página que vai ao ar. Wizard completo, calcula no
+  navegador, sem dependências e sem rede. É o que se publica no Google Sites
+  ([`docs/GOOGLE_SITES.md`](docs/GOOGLE_SITES.md)).
+- **`main.py` + `src/bde/`** — o backend FastAPI, para quem precisar consumir a
+  regra como API. Não é usado pela página.
 
 O motor reproduz a planilha `Simulador_Idepe_e_Atingimento_de_metas_2026.xlsx`
 do Núcleo da SEPLAG/PE, célula por célula — inclusive onde ela contraria a regra
@@ -14,12 +22,29 @@ As decisões estão registradas em [`docs/EXTRACAO_PLANILHA.md`](docs/EXTRACAO_P
 
 ## Como rodar
 
+A página não precisa de nada instalado — basta abrir `web/index.html` no
+navegador.
+
+O backend:
+
 ```bash
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
 Documentação interativa em `http://127.0.0.1:8000/docs`.
+
+## Testes
+
+```bash
+python3 tests/test_paridade.py
+```
+
+Roda os dois motores sobre os mesmos 400 casos e falha se qualquer campo
+divergir. Os casos pousam em cima dos limites de faixa de `H45` e nos empates de
+`ROUND(...; 4)` — onde 0,0001 na média ponderada vale 25 pontos percentuais de
+bônus. **Mudou a regra, mudam os dois motores, e este teste roda antes de
+publicar.**
 
 ## `POST /api/v1/simular-bde`
 
@@ -76,10 +101,12 @@ Levantadas da tabela-verdade completa ([`docs/EXTRACAO_PLANILHA.md`](docs/EXTRAC
 ## Estrutura
 
 ```
-main.py              aplicação FastAPI e CORS
-src/bde/schemas.py   contrato de entrada e saída (Pydantic)
-src/bde/service.py   motor de cálculo — reprodução de H45, H47 e C45
-src/bde/router.py    POST /api/v1/simular-bde
+web/index.html         página publicável — wizard + motor em JavaScript
+main.py                aplicação FastAPI e CORS
+src/bde/schemas.py     contrato de entrada e saída (Pydantic)
+src/bde/service.py     motor de cálculo — reprodução de H45, H47 e C45
+src/bde/router.py      POST /api/v1/simular-bde
+tests/test_paridade.py paridade entre o motor Python e o motor JavaScript
 ```
 
 ## Documentação
@@ -88,3 +115,5 @@ src/bde/router.py    POST /api/v1/simular-bde
   célula, fórmulas mortas, divergências e a tabela-verdade de conferência.
 - [`docs/CAMINHOS_RUINS.md`](docs/CAMINHOS_RUINS.md) — rotas de uso que quebram
   a solução, com o estado de cada uma.
+- [`docs/GOOGLE_SITES.md`](docs/GOOGLE_SITES.md) — o que muda para publicar no
+  Google Sites e o passo a passo.
