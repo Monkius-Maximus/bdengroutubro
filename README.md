@@ -14,7 +14,8 @@ São duas implementações da mesma regra, mantidas idênticas por teste:
 
 O motor reproduz a planilha `Simulador_Idepe_e_Atingimento_de_metas_2026.xlsx`
 do Núcleo da SEPLAG/PE, célula por célula — inclusive onde ela contraria a regra
-escrita, para que o simulador web e a planilha em circulação nunca divirjam.
+escrita. A referência de comportamento é o simulador já em uso no NGR-SEE: onde
+a planilha se contradiz, vale o que esse sistema faz.
 As decisões estão registradas em [`docs/EXTRACAO_PLANILHA.md`](docs/EXTRACAO_PLANILHA.md).
 
 > Simulação **não oficial**. O valor final do BDE depende ainda de salário-base,

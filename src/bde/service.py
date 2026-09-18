@@ -15,7 +15,6 @@ Divergências conhecidas da planilha em relação à regra escrita, reproduzidas
 por decisão de negócio (mecanismo já validado e em uso na SEPLAG):
 
   - As cotas de equidade e elementares não são cumulativas: C45 usa OR.
-  - H45 devolve 0% para diferenças entre −0,3 e −0,2.
 
 Detalhes e tabela-verdade em docs/EXTRACAO_PLANILHA.md.
 """
@@ -77,15 +76,16 @@ def converter_diferenca_em_percentual(diferenca: float) -> float:
     """
     Fórmula H45. Recebe diferença já arredondada por `arredondar_excel`.
 
-    A ordem dos testes reproduz a escada de IFs da planilha, inclusive o trecho
-    em que ela devolve 0 em vez de ler 0,25 da grade E42:M43.
+    Lê a grade de consulta `E42:M43` da planilha: cada faixa vale a partir do
+    seu limite inferior, inclusive. A escada de IFs de `H45` devolve 0% para
+    diferenças estritamente entre −0,3 e −0,2 — um buraco que a própria grade
+    contradiz, e que o simulador em uso no NGR nunca teve. Ver
+    docs/EXTRACAO_PLANILHA.md §5.2.
     """
     if diferenca < -0.3:
         return 0.00
-    if diferenca == -0.3:
-        return 0.25  # única diferença que rende 25% em H45
     if diferenca < -0.2:
-        return 0.00  # buraco de H45, reproduzido por decisão de negócio
+        return 0.25
     if diferenca < -0.1:
         return 0.50
     if diferenca < 0.0:
@@ -152,13 +152,6 @@ def _gerar_alertas(
 ) -> list[str]:
     """Traduz os platôs da fórmula em orientação para o gestor."""
     alertas: list[str] = []
-
-    if -0.3 < media_ponderada < -0.2:
-        alertas.append(
-            "Sua média ponderada ficou entre −0,30 e −0,20. Nessa faixa a cota "
-            "de resultado fica em 0%: apenas a diferença exatamente igual a "
-            "−0,30 recebe 25%. Confirme o resultado com a sua GRE."
-        )
 
     proximos = [limite for limite in LIMITES_FAIXAS if limite > media_ponderada]
     if proximos:

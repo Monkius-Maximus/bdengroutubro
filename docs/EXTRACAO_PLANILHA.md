@@ -120,23 +120,28 @@ return cota_resultado
 Equivalência verificada em 804 combinações contínuas e nas 36 discretas: zero
 divergências.
 
-### 5.2 Buraco na faixa (−0,3; −0,2) em `H45` — DECIDIDO: reproduzir
+### 5.2 Buraco na faixa (−0,3; −0,2) em `H45` — DECIDIDO: ler a grade
 
 `H45` começa com `IF(H47 < -0,3; 0; IF(H47 <= -0,3; 0,25; IF(H47 < -0,2; 0; …`.
 O terceiro teste devolve **0%** para qualquer diferença estritamente entre
 −0,3 e −0,2; só a igualdade exata a −0,3 rende 25%.
 
-**Decisão: reproduzir o comportamento**, pelo mesmo motivo da §5.1.
+A grade de consulta da mesma planilha (`E42:M43`) traz `0,25` embaixo de
+`−0,3`, e as outras oito faixas usam `≥ limite inferior`. As duas leituras da
+planilha se contradizem: é a escada de IFs que lê a própria grade errado.
 
-Registro para quem for reavaliar: a própria grade de consulta da planilha
-(`E42:M43`) traz `0,25` embaixo de `−0,3`, e as outras oito faixas usam
-`≥ limite inferior`. É a escada de IFs que lê a grade errado. **Recomendamos
-levar o ponto ao Núcleo da SEPLAG** (Zaplag (81) 98494-4837, nota 6 da
-planilha): se confirmado como erro de digitação, basta trocar a ordem dos dois
-primeiros testes em `converter_diferenca_em_percentual`.
+**Decisão: ler a grade** — a faixa inteira `[−0,3; −0,2)` vale 25%. É o que o
+simulador em uso no NGR-SEE sempre fez (`_converter()` do `BDE-Interface`, uma
+busca binária na tabela de faixas), e manter o simulador web divergindo dele
+produziria 0% onde o sistema em circulação produz 25%, para a mesma escola.
 
-Enquanto isso, o simulador emite um alerta explícito quando a média cai nessa
-faixa, para o gestor não ler 0% como defeito do sistema.
+Uma versão anterior deste repositório reproduzia o buraco. Foi revertido: o
+critério aqui é não divergir do mecanismo já validado e em uso.
+
+**Continua valendo levar o ponto ao Núcleo da SEPLAG** (Zaplag
+(81) 98494-4837, nota 6 da planilha) para que a escada de IFs da planilha seja
+corrigida — enquanto ela existir, a planilha e o simulador darão respostas
+diferentes nessa faixa, e a diferença é de 25 pontos percentuais de bônus.
 
 ### 5.3 A cota de participação não é condicional na planilha
 

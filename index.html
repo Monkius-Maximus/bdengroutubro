@@ -733,7 +733,6 @@ body {
    por decisao de negocio:
 
      - As cotas de equidade e elementares nao sao cumulativas: C45 usa OR.
-     - H45 devolve 0% para diferencas entre -0,3 e -0,2.
 
    Detalhes e tabela-verdade em docs/EXTRACAO_PLANILHA.md.
    ============================================================================ */
@@ -772,13 +771,15 @@ function arredondarExcel(valor) {
 /**
  * Formula H45. Recebe a diferenca ja arredondada por arredondarExcel.
  *
- * A ordem dos testes reproduz a escada de IFs da planilha, inclusive o trecho
- * em que ela devolve 0 em vez de ler 0,25 da grade E42:M43.
+ * Le a grade de consulta E42:M43 da planilha: cada faixa vale a partir do seu
+ * limite inferior, inclusive. A escada de IFs de H45 devolve 0% para
+ * diferencas estritamente entre -0,3 e -0,2 — um buraco que a propria grade
+ * contradiz, e que o simulador em uso no NGR nunca teve. Ver
+ * docs/EXTRACAO_PLANILHA.md secao 5.2.
  */
 function converterDiferencaEmPercentual(diferenca) {
     if (diferenca < -0.3) return 0.00;
-    if (diferenca === -0.3) return 0.25;  // unica diferenca que rende 25% em H45
-    if (diferenca < -0.2) return 0.00;    // buraco de H45, reproduzido por decisao de negocio
+    if (diferenca < -0.2) return 0.25;
     if (diferenca < -0.1) return 0.50;
     if (diferenca < 0.0) return 0.75;
     if (diferenca < 0.1) return 1.00;

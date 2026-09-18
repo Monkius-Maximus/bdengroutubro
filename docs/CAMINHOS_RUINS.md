@@ -269,8 +269,8 @@ de um lado agora reprova o teste em vez de aparecer na tela do gestor.
 |---|---|---|
 | B1 | `OR` vs. bônus cumulativos em `C45` | Decidido: reproduzir a planilha |
 | B2 | Cota além do resultado descartada | Decidido: reproduzir, com aviso ao gestor |
-| A8 | Buraco da faixa (−0,3; −0,2) em `H45` | Decidido: reproduzir, com alerta explícito |
-| — | Confirmar o buraco da faixa com o Núcleo da SEPLAG | **Aberto — fora do código** |
+| A8 | Buraco da faixa (−0,3; −0,2) em `H45` | Decidido: ler a grade (25%), como o sistema em uso |
+| — | Levar o buraco da faixa ao Núcleo da SEPLAG | **Aberto — fora do código** |
 | B4 | Cota de participação fixada em 50% | Mitigado: constante nomeada por ciclo |
 | C3 | CORS liberado | Aberto, antes de produção |
 | C7 | Tabela de conversão duplicada no frontend | Decidido: duplicar, com teste de paridade |
