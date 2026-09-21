@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador BDE — NGR-SEE</title>
+    <link rel="icon" type="image/png" href="/static/img/logo-ngr.png">
+    <link rel="stylesheet" href="/static/css/estilo.css">
+</head>
+<body>
+
+    <header class="header">
+        <img src="/static/img/logo-ngr.png" alt="NGR-SEE" class="header-logo" onerror="this.style.display='none'">
+        <h1>Simulador <span>BDE</span></h1>
+        <p>Bônus de Desempenho Educacional — Pernambuco 2026</p>
+    </header>
+
+    <main class="wizard-container" id="wizard">
+
+        <div class="progresso-wrap">
+            <div class="progresso-info">
+                <span class="etapa-label" id="lbl-etapa">Passo 1 de 8</span>
+                <span class="pct-label" id="lbl-progresso">0%</span>
+            </div>
+            <div class="progresso-barra">
+                <div class="progresso-fill" id="barra-progresso"></div>
+            </div>
+        </div>
+
+        <div class="steps-dots" id="steps-dots"></div>
+
+        <div class="pergunta-area" id="area-conteudo">
+
+            <!-- STEP 0: Etapas -->
+            <div class="step" data-step="0">
+                <h2 class="pergunta-titulo">Quais etapas sua escola <strong>pactuou metas</strong> para 2025?</h2>
+                <div class="opcoes" id="opcoes-etapas">
+                    <div class="opcao-card" data-campo="etapa_ai" onclick="toggleOpcao(this)">
+                        <svg class="icone-svg" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                        <span class="texto">Anos Iniciais (1º ao 5º ano)</span>
+                        <span class="check"></span>
+                    </div>
+                    <div class="opcao-card" data-campo="etapa_af" onclick="toggleOpcao(this)">
+                        <svg class="icone-svg" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+                        <span class="texto">Anos Finais (6º ao 9º ano)</span>
+                        <span class="check"></span>
+                    </div>
+                    <div class="opcao-card" data-campo="etapa_em" onclick="toggleOpcao(this)">
+                        <svg class="icone-svg" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                        <span class="texto">Ensino Médio (1º ao 3º ano)</span>
+                        <span class="check"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 1: AI -->
+            <div class="step" data-step="1" style="display:none">
+                <h2 class="pergunta-titulo">Informe os dados dos <strong>Anos Iniciais</strong></h2>
+                <div class="input-grupo">
+                    <div class="input-campo">
+                        <label>Matrículas</label>
+                        <input type="number" id="inp-ai-mat" placeholder="Ex: 120" min="1">
+                    </div>
+                    <div class="input-campo">
+                        <label>Meta IDEPE</label>
+                        <input type="number" id="inp-ai-meta" placeholder="Ex: 4.50" step="0.01" min="0">
+                    </div>
+                    <div class="input-campo">
+                        <label>Resultado IDEPE</label>
+                        <input type="number" id="inp-ai-res" placeholder="Ex: 4.70" step="0.01" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 2: AF -->
+            <div class="step" data-step="2" style="display:none">
+                <h2 class="pergunta-titulo">Informe os dados dos <strong>Anos Finais</strong></h2>
+                <div class="input-grupo">
+                    <div class="input-campo">
+                        <label>Matrículas</label>
+                        <input type="number" id="inp-af-mat" placeholder="Ex: 200" min="1">
+                    </div>
+                    <div class="input-campo">
+                        <label>Meta IDEPE</label>
+                        <input type="number" id="inp-af-meta" placeholder="Ex: 4.50" step="0.01" min="0">
+                    </div>
+                    <div class="input-campo">
+                        <label>Resultado IDEPE</label>
+                        <input type="number" id="inp-af-res" placeholder="Ex: 4.45" step="0.01" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 3: EM -->
+            <div class="step" data-step="3" style="display:none">
+                <h2 class="pergunta-titulo">Informe os dados do <strong>Ensino Médio</strong></h2>
+                <div class="input-grupo">
+                    <div class="input-campo">
+                        <label>Matrículas</label>
+                        <input type="number" id="inp-em-mat" placeholder="Ex: 300" min="1">
+                    </div>
+                    <div class="input-campo">
+                        <label>Meta IDEPE</label>
+                        <input type="number" id="inp-em-meta" placeholder="Ex: 5.00" step="0.01" min="0">
+                    </div>
+                    <div class="input-campo">
+                        <label>Resultado IDEPE</label>
+                        <input type="number" id="inp-em-res" placeholder="Ex: 5.10" step="0.01" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 4: Equidade -->
+            <div class="step" data-step="4" style="display:none">
+                <h2 class="pergunta-titulo">Responda sobre as <strong>Metas de Equidade</strong></h2>
+
+                <div class="pergunta-bloco">
+                    <p class="pergunta-item">Houve evolução, no Saepe 2025, dos estudantes Pretos, Pardos e Indígenas e daqueles de nível socioeconômico mais baixo, em comparação com 2024? (Consulte o BI da Equidade)</p>
+                    <div class="botoes-simnao">
+                        <button type="button" class="btn-simnao" data-campo="reduziu_desigualdade" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
+                        <button type="button" class="btn-simnao" data-campo="reduziu_desigualdade" data-valor="false" onclick="toggleSimNaoPergunta(this)">Não</button>
+                    </div>
+                </div>
+
+                <div class="pergunta-bloco">
+                    <p class="pergunta-item">Na sua Macrorregião, comparando com escolas do mesmo tipo, sua escola está entre as 33,3% (no primeiro terço) com menor percentual de estudantes nos níveis elementares no SAEPE 2025? (Consulte o BI do SAEPE – versão GRE - Botão PD - filtre as Gres da Macro região e o tipo de sua escola)</p>
+                    <div class="botoes-simnao">
+                        <button type="button" class="btn-simnao" data-campo="terco_menor_elementares" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
+                        <button type="button" class="btn-simnao" data-campo="terco_menor_elementares" data-valor="false" onclick="toggleSimNaoPergunta(this)">Não</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 5: Participação -->
+            <div class="step" data-step="5" style="display:none">
+                <h2 class="pergunta-titulo">A escola atingiu <strong>participação &ge; 80%</strong> em todos os componentes e etapas avaliados no SAEPE?</h2>
+                <div class="opcoes">
+                    <div class="opcao-card" data-campo="participacao_maior_80" onclick="toggleSimNao(this, true)">
+                        <svg class="icone-svg" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
+                        <span class="texto">Sim, atingiu participação igual ou superior a 80%</span>
+                        <span class="check"></span>
+                    </div>
+                    <div class="opcao-card" data-campo="participacao_maior_80" onclick="toggleSimNao(this, false)">
+                        <svg class="icone-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
+                        <span class="texto">Não atingiu 80% de participação</span>
+                        <span class="check"></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 6: Resumo -->
+            <div class="step" data-step="6" style="display:none">
+                <div class="resumo-container" id="resumo-area"></div>
+            </div>
+
+            <!-- STEP 7: Resultado -->
+            <div class="step" data-step="7" style="display:none">
+                <div class="resultado-container" id="resultado-area"></div>
+            </div>
+
+        </div>
+
+        <div class="navegacao" id="navegacao">
+            <button class="btn btn-voltar" id="btn-voltar" onclick="voltar()" style="display:none">Voltar</button>
+            <button class="btn btn-proximo" id="btn-proximo" onclick="proximo()" disabled>Próximo</button>
+        </div>
+
+    </main>
+
+    <div class="toast-erro" id="toast-erro"></div>
+
+    <!-- Footer fixo no rodapé da tela -->
+    <footer class="footer">
+        <button class="footer-btn" id="btn-saibamais" onclick="abrirPopup('popup-saibamais')" aria-label="Saiba mais">
+            <svg class="footer-btn-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Saiba mais</span>
+        </button>
+        <p class="footer-creditos">Desenvolvido em 2026, pelo Núcleo de Gestão para Resultados na Educação (NGR-SEE) / Secretaria de Planejamento, Gestão e Desenvolvimento Regional (Seplag)</p>
+        <button class="footer-btn" id="btn-whatsapp" onclick="abrirPopup('popup-whatsapp')" aria-label="WhatsApp">
+            <svg class="footer-btn-icone" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            <span>WhatsApp</span>
+        </button>
+    </footer>
+
+    <!-- Popup: Saiba Mais -->
+    <div class="popup-overlay" id="popup-saibamais" onclick="fecharPopup(event, 'popup-saibamais')">
+        <div class="popup-conteudo" onclick="event.stopPropagation()">
+            <button class="popup-fechar" onclick="fecharPopupDireto('popup-saibamais')" aria-label="Fechar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="popup-header">
+                <img src="/static/img/logo-ngr.png" alt="NGR-SEE" class="popup-logo" onerror="this.style.display='none'">
+                <h3>Saiba mais</h3>
+            </div>
+            <div class="popup-body">
+                <ol class="popup-lista">
+                    <li>Este simulador foi desenvolvido pelo Núcleo da Seplag com o objetivo de esclarecer dúvidas sobre o atingimento das Metas 2025. Ressalta-se que os resultados apresentados não são oficiais.</li>
+                    <li>Pequenas diferenças podem ocorrer devido a arredondamentos.</li>
+                    <li>As metas foram projetadas considerando o contexto de cada escola e estão descritas no Termo de Compromisso (Escola/GRE/SEE).</li>
+                    <li>O atingimento de cada etapa é calculado pela diferença entre o resultado obtido e a meta estabelecida. A cota do BDE não está considerada neste cálculo. Para consultar o percentual, acesse a aba "Cenário Validado".</li>
+                    <li>Para escolas com mais de uma etapa, o atingimento é calculado de forma ponderada, considerando a quantidade de estudantes em cada etapa.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup: WhatsApp -->
+    <div class="popup-overlay" id="popup-whatsapp" onclick="fecharPopup(event, 'popup-whatsapp')">
+        <div class="popup-conteudo" onclick="event.stopPropagation()">
+            <button class="popup-fechar" onclick="fecharPopupDireto('popup-whatsapp')" aria-label="Fechar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="popup-header">
+                <img src="/static/img/logo-ngr.png" alt="NGR-SEE" class="popup-logo" onerror="this.style.display='none'">
+                <h3>Contato</h3>
+            </div>
+            <div class="popup-body popup-whatsapp-body">
+                <p class="popup-whatsapp-texto">Em caso de dúvidas ou identificação de possíveis inconsistências, entre em contato pelo Zaplag:</p>
+                <p class="popup-whatsapp-numero">(81) 98494-4837</p>
+                <a href="https://wa.me/5581984944837" target="_blank" rel="noopener noreferrer" class="popup-whatsapp-link">
+                    <span>Converse pelo WhatsApp</span>
+                    <small>Clique aqui</small>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/wizard.js"></script>
+</body>
+</html>
