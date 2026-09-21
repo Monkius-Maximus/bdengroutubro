@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simulador BDE — NGR-SEE</title>
-    <link rel="icon" type="image/png" href="assets/logo-ngr.png">
+    <link rel="icon" type="image/png" href="app/static/img/logo-ngr.png">
 <style>
 /* ============================================================================
    Wizard BDE — NGR-SEE
@@ -12,8 +12,9 @@
    ============================================================================ */
 
 :root {
-    --bg: #f4f5f0;
-    --card: #ffffff;
+    --bg: #ffffff;
+    --bg-alt: #f8f9fb;
+    --card: #f8f9fb;
     --azul: #1a3a5c;
     --azul-claro: #2a6496;
     --azul-borda: #b8d4e8;
@@ -27,7 +28,9 @@
     --vermelho-bg: #fee2e2;
     --dourado: #ca8a04;
     --sombra: 0 2px 12px rgba(26, 58, 92, 0.08);
+    --sombra-md: 0 4px 24px rgba(26, 58, 92, 0.12);
     --raio: 12px;
+    --overlay: rgba(15, 23, 42, 0.45);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -40,6 +43,10 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.5;
+    letter-spacing: 0.01em;
 }
 
 /* Header */
@@ -67,7 +74,7 @@ body {
 .wizard-container {
     width: 100%;
     max-width: 640px;
-    padding: 0 16px 32px;
+    padding: 0 16px 80px;
 }
 
 /* Progresso */
@@ -88,11 +95,11 @@ body {
 }
 .progresso-fill {
     height: 100%;
-    width: 100%;
-    background: linear-gradient(90deg, #c0392b 0%, #e67e22 55%, #f0b429 100%);
+    width: 0%;
+    background: linear-gradient(90deg, var(--azul), var(--azul-claro));
+    background-size: 200% 100%;
     border-radius: 3px;
-    clip-path: inset(0 100% 0 0);
-    transition: clip-path .4s ease;
+    transition: width .4s ease, background .5s ease;
 }
 
 /* Dots */
@@ -114,6 +121,20 @@ body {
     background: var(--azul-claro);
     transform: scale(1.3);
     box-shadow: 0 0 0 3px rgba(42, 100, 150, 0.25);
+}
+
+/* Gamificação: cores dos dots por fase */
+.dot.fase-dourado { background: var(--dourado); }
+.dot.fase-dourado.completo { background: var(--dourado); }
+.dot.fase-dourado.ativo {
+    background: var(--dourado);
+    box-shadow: 0 0 0 3px rgba(202, 138, 4, 0.25);
+}
+.dot.fase-verde { background: var(--verde); }
+.dot.fase-verde.completo { background: var(--verde); }
+.dot.fase-verde.ativo {
+    background: var(--verde);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.25);
 }
 
 /* Steps */
@@ -218,7 +239,7 @@ body {
     box-shadow: 0 0 0 3px rgba(42, 100, 150, 0.15);
 }
 
-/* Perguntas com Sim/Nao (Step 4 equidade) */
+/* Perguntas com Sim/Não (Step 4 equidade) */
 .pergunta-bloco {
     width: 100%;
     background: var(--card);
@@ -243,7 +264,7 @@ body {
     padding: 10px 0;
     border: 2px solid var(--cinza-claro);
     border-radius: 8px;
-    background: white;
+    background: var(--card);
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
@@ -260,7 +281,7 @@ body {
     color: white;
 }
 
-/* Navegacao */
+/* Navegação */
 .navegacao {
     display: flex;
     justify-content: space-between;
@@ -290,11 +311,11 @@ body {
 }
 .btn-proximo:hover:not(:disabled) { background: var(--azul-claro); }
 .btn-voltar {
-    background: white;
+    background: var(--card);
     color: var(--azul);
     border: 2px solid var(--azul-borda);
 }
-.btn-voltar:hover { background: #f0f7ff; }
+.btn-voltar:hover { background: #eef4fb; }
 .btn-resultado {
     background: var(--azul);
     color: white;
@@ -323,35 +344,191 @@ body {
     transform: translateX(-50%) translateY(0);
 }
 
-/* Footer */
+/* Footer — fixo no rodapé da tela, botões nos cantos */
 .footer {
-    width: 100%;
-    max-width: 640px;
-    padding: 16px;
-    font-size: 0.75rem;
-    color: var(--cinza);
-    margin-top: auto;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 16px;
+    background: var(--bg);
+    border-top: 1px solid var(--cinza-claro);
+    z-index: 50;
 }
-.notas-rodape {
+.footer-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 2px solid var(--cinza-claro);
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--azul);
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s ease;
+    box-shadow: var(--sombra);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.footer-btn:hover {
+    border-color: var(--azul-claro);
+    background: #eef4fb;
+    box-shadow: var(--sombra-md);
+}
+.footer-btn-icone {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+.footer-creditos {
+    font-size: 0.6rem;
+    color: var(--cinza);
+    text-align: center;
+    line-height: 1.3;
+    flex: 1;
+    padding: 0 8px;
+}
+
+/* Popups */
+.popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: var(--overlay);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    animation: fadeIn .2s ease;
+}
+.popup-overlay.ativo {
+    display: flex;
+}
+.popup-conteudo {
+    background: var(--bg);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.2);
+    position: relative;
+    animation: popIn .25s ease;
+}
+.popup-fechar {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: var(--card);
+    color: var(--cinza);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all .2s ease;
+    z-index: 1;
+}
+.popup-fechar:hover {
+    background: var(--cinza-claro);
+    color: var(--azul);
+}
+.popup-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 24px 0;
+    gap: 8px;
+}
+.popup-logo {
+    height: 40px;
+}
+.popup-header h3 {
+    font-size: 1.15rem;
+    color: var(--azul);
+    font-weight: 700;
+}
+.popup-body {
+    padding: 20px 24px 24px;
+}
+.popup-lista {
     list-style: decimal;
     padding-left: 20px;
-    margin-bottom: 12px;
-    line-height: 1.5;
+    font-size: 0.85rem;
+    color: #374151;
+    line-height: 1.6;
 }
-.notas-rodape li {
-    margin-bottom: 4px;
+.popup-lista li {
+    margin-bottom: 10px;
 }
-.footer-cr {
+.popup-lista li:last-child {
+    margin-bottom: 0;
+}
+
+/* Popup WhatsApp */
+.popup-whatsapp-body {
     text-align: center;
-    font-weight: 600;
+}
+.popup-whatsapp-texto {
+    font-size: 0.9rem;
+    color: #374151;
+    line-height: 1.5;
+    margin-bottom: 8px;
+}
+.popup-whatsapp-numero {
+    font-size: 1.1rem;
+    font-weight: 700;
     color: var(--azul);
-    margin-top: 8px;
+    margin-bottom: 16px;
+}
+.popup-whatsapp-link {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 12px 28px;
+    background: #25d366;
+    color: white;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all .2s ease;
+    box-shadow: 0 4px 16px rgba(37, 211, 102, 0.3);
+}
+.popup-whatsapp-link:hover {
+    background: #1da851;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4);
+}
+.popup-whatsapp-link small {
+    font-size: 0.75rem;
+    font-weight: 400;
+    opacity: 0.9;
 }
 
 /* Animate */
 @keyframes fadeSlideUp {
     from { opacity: 0; transform: translateY(12px); }
     to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes popIn {
+    from { opacity: 0; transform: scale(0.95) translateY(10px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
 }
 
 /* ============================================================================
@@ -532,15 +709,53 @@ body {
     transition: background .2s;
 }
 .btn-reiniciar:hover { background: var(--azul-claro); }
+
+/* ============================================================================
+   Detalhe-card clicável (Step 7)
+   ============================================================================ */
+.detalhe-card[role="button"] {
+    cursor: pointer;
+    position: relative;
+    transition: all .2s ease;
+}
+.detalhe-card[role="button"]:hover {
+    border-color: var(--azul-claro);
+    transform: translateY(-2px);
+    box-shadow: var(--sombra-md);
+}
+.detalhe-card[role="button"]:focus-visible {
+    outline: 2px solid var(--azul-claro);
+    outline-offset: 2px;
+}
+.detalhe-info {
+    margin-top: 6px;
+    color: var(--cinza);
+    opacity: 0.6;
+    transition: opacity .2s ease;
+}
+.detalhe-card[role="button"]:hover .detalhe-info {
+    opacity: 1;
+    color: var(--azul-claro);
+}
+
+/* Popup de Métrica */
+.popup-metrica {
+    max-width: 420px;
+}
+.popup-metrica-texto {
+    font-size: 0.9rem;
+    color: #374151;
+    line-height: 1.7;
+}
 </style>
 </head>
 <body>
 
 
     <header class="header">
-        <img src="assets/logo-ngr.png" alt="NGR-SEE" class="header-logo" onerror="this.style.display='none'">
+        <img src="app/static/img/logo-ngr.png" alt="NGR-SEE" class="header-logo" onerror="this.style.display='none'">
         <h1>Simulador <span>BDE</span></h1>
-        <p>Bonus de Desempenho Educacional — Pernambuco 2026</p>
+        <p>Bônus de Desempenho Educacional — Pernambuco 2026</p>
     </header>
 
     <main class="wizard-container" id="wizard">
@@ -565,17 +780,17 @@ body {
                 <div class="opcoes" id="opcoes-etapas">
                     <div class="opcao-card" data-campo="etapa_ai" onclick="toggleOpcao(this)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                        <span class="texto">Anos Iniciais (1 ao 5 ano)</span>
+                        <span class="texto">Anos Iniciais (1º ao 5º ano)</span>
                         <span class="check"></span>
                     </div>
                     <div class="opcao-card" data-campo="etapa_af" onclick="toggleOpcao(this)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-                        <span class="texto">Anos Finais (6 ao 9 ano)</span>
+                        <span class="texto">Anos Finais (6º ao 9º ano)</span>
                         <span class="check"></span>
                     </div>
                     <div class="opcao-card" data-campo="etapa_em" onclick="toggleOpcao(this)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                        <span class="texto">Ensino Medio (1 ao 3 ano)</span>
+                        <span class="texto">Ensino Médio (1º ao 3º ano)</span>
                         <span class="check"></span>
                     </div>
                 </div>
@@ -586,7 +801,7 @@ body {
                 <h2 class="pergunta-titulo">Informe os dados dos <strong>Anos Iniciais</strong></h2>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label>Matriculas</label>
+                        <label>Matrículas</label>
                         <input type="number" id="inp-ai-mat" placeholder="Ex: 120" min="1">
                     </div>
                     <div class="input-campo">
@@ -605,7 +820,7 @@ body {
                 <h2 class="pergunta-titulo">Informe os dados dos <strong>Anos Finais</strong></h2>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label>Matriculas</label>
+                        <label>Matrículas</label>
                         <input type="number" id="inp-af-mat" placeholder="Ex: 200" min="1">
                     </div>
                     <div class="input-campo">
@@ -621,10 +836,10 @@ body {
 
             <!-- STEP 3: EM -->
             <div class="step" data-step="3" style="display:none">
-                <h2 class="pergunta-titulo">Informe os dados do <strong>Ensino Medio</strong></h2>
+                <h2 class="pergunta-titulo">Informe os dados do <strong>Ensino Médio</strong></h2>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label>Matriculas</label>
+                        <label>Matrículas</label>
                         <input type="number" id="inp-em-mat" placeholder="Ex: 300" min="1">
                     </div>
                     <div class="input-campo">
@@ -638,39 +853,39 @@ body {
                 </div>
             </div>
 
-            <!-- STEP 4: Equidade — duas perguntas independentes -->
+            <!-- STEP 4: Equidade -->
             <div class="step" data-step="4" style="display:none">
                 <h2 class="pergunta-titulo">Responda sobre as <strong>Metas de Equidade</strong></h2>
 
                 <div class="pergunta-bloco">
-                    <p class="pergunta-item">Houve evolucao dos estudantes PPI e de renda/NSE baixa no SAEPE 2025?</p>
+                    <p class="pergunta-item">Houve evolução, no Saepe 2025, dos estudantes Pretos, Pardos e Indígenas e daqueles de nível socioeconômico mais baixo, em comparação com 2024? (Consulte o BI da Equidade)</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="reduziu_desigualdade" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
-                        <button type="button" class="btn-simnao" data-campo="reduziu_desigualdade" data-valor="false" onclick="toggleSimNaoPergunta(this)">Nao</button>
+                        <button type="button" class="btn-simnao" data-campo="reduziu_desigualdade" data-valor="false" onclick="toggleSimNaoPergunta(this)">Não</button>
                     </div>
                 </div>
 
                 <div class="pergunta-bloco">
-                    <p class="pergunta-item">Sua escola esta no 1 terco com menor % de estudantes nos padroes elementares?</p>
+                    <p class="pergunta-item">Na sua Macrorregião, comparando com escolas do mesmo tipo, sua escola está entre as 33,3% (no primeiro terço) com menor percentual de estudantes nos níveis elementares no SAEPE 2025? (Consulte o BI do SAEPE – versão GRE - Botão PD - filtre as Gres da Macro região e o tipo de sua escola)</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="terco_menor_elementares" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
-                        <button type="button" class="btn-simnao" data-campo="terco_menor_elementares" data-valor="false" onclick="toggleSimNaoPergunta(this)">Nao</button>
+                        <button type="button" class="btn-simnao" data-campo="terco_menor_elementares" data-valor="false" onclick="toggleSimNaoPergunta(this)">Não</button>
                     </div>
                 </div>
             </div>
 
-            <!-- STEP 5: Participacao -->
+            <!-- STEP 5: Participação -->
             <div class="step" data-step="5" style="display:none">
-                <h2 class="pergunta-titulo">A escola atingiu <strong>participacao &ge; 80%</strong> em todos os componentes e etapas avaliados no SAEPE?</h2>
+                <h2 class="pergunta-titulo">A escola atingiu <strong>participação &ge; 80%</strong> em todos os componentes e etapas avaliados no SAEPE?</h2>
                 <div class="opcoes">
                     <div class="opcao-card" data-campo="participacao_maior_80" onclick="toggleSimNao(this, true)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>
-                        <span class="texto">Sim, atingiu participacao igual ou superior a 80%</span>
+                        <span class="texto">Sim, atingiu participação igual ou superior a 80%</span>
                         <span class="check"></span>
                     </div>
                     <div class="opcao-card" data-campo="participacao_maior_80" onclick="toggleSimNao(this, false)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6"/><path d="M9 9l6 6"/></svg>
-                        <span class="texto">Nao atingiu 80% de participacao</span>
+                        <span class="texto">Não atingiu 80% de participação</span>
                         <span class="check"></span>
                     </div>
                 </div>
@@ -690,24 +905,74 @@ body {
 
         <div class="navegacao" id="navegacao">
             <button class="btn btn-voltar" id="btn-voltar" onclick="voltar()" style="display:none">Voltar</button>
-            <button class="btn btn-proximo" id="btn-proximo" onclick="proximo()" disabled>Proximo</button>
+            <button class="btn btn-proximo" id="btn-proximo" onclick="proximo()" disabled>Próximo</button>
         </div>
 
     </main>
 
     <div class="toast-erro" id="toast-erro"></div>
 
+    <!-- Footer fixo no rodapé da tela -->
     <footer class="footer">
-        <ol class="notas-rodape">
-            <li>Este simulador foi desenvolvido pelo Nucleo da Seplag com o objetivo de esclarecer duvidas sobre o atingimento das Metas 2025. Ressalta-se que os resultados apresentados nao sao oficiais.</li>
-            <li>Pequenas diferencas podem ocorrer devido a arredondamentos.</li>
-            <li>As metas foram projetadas considerando o contexto de cada escola e estao descritas no Termo de Compromisso (Escola/GRE/SEE).</li>
-            <li>O atingimento de cada etapa e calculado pela diferenca entre o resultado obtido e a meta estabelecida. A cota do BDE nao esta considerada neste calculo. Para consultar o percentual, acesse a aba "Cenario Validado".</li>
-            <li>Para escolas com mais de uma etapa, o atingimento e calculado de forma ponderada, considerando a quantidade de estudantes em cada etapa.</li>
-            <li>Em caso de duvidas ou identificacao de possiveis inconsistencias, entre em contato pelo Zaplag: (81) 98494-4837.</li>
-        </ol>
-        <p class="footer-cr">Nucleo de Gestao Regional — SEE/PE</p>
+        <button class="footer-btn" id="btn-saibamais" onclick="abrirPopup('popup-saibamais')" aria-label="Saiba mais">
+            <svg class="footer-btn-icone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>Saiba mais</span>
+        </button>
+        <p class="footer-creditos">Desenvolvido em 2026, pelo Núcleo de Gestão para Resultados na Educação (NGR-SEE) / Secretaria de Planejamento, Gestão e Desenvolvimento Regional (Seplag)</p>
+        <button class="footer-btn" id="btn-whatsapp" onclick="abrirPopup('popup-whatsapp')" aria-label="WhatsApp">
+            <svg class="footer-btn-icone" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+            </svg>
+            <span>WhatsApp</span>
+        </button>
     </footer>
+
+    <!-- Popup: Saiba Mais -->
+    <div class="popup-overlay" id="popup-saibamais" onclick="fecharPopup(event, 'popup-saibamais')">
+        <div class="popup-conteudo" onclick="event.stopPropagation()">
+            <button class="popup-fechar" onclick="fecharPopupDireto('popup-saibamais')" aria-label="Fechar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="popup-header">
+                <img src="app/static/img/logo-ngr.png" alt="NGR-SEE" class="popup-logo" onerror="this.style.display='none'">
+                <h3>Saiba mais</h3>
+            </div>
+            <div class="popup-body">
+                <ol class="popup-lista">
+                    <li>Este simulador foi desenvolvido pelo Núcleo da Seplag com o objetivo de esclarecer dúvidas sobre o atingimento das Metas 2025. Ressalta-se que os resultados apresentados não são oficiais.</li>
+                    <li>Pequenas diferenças podem ocorrer devido a arredondamentos.</li>
+                    <li>As metas foram projetadas considerando o contexto de cada escola e estão descritas no Termo de Compromisso (Escola/GRE/SEE).</li>
+                    <li>O atingimento de cada etapa é calculado pela diferença entre o resultado obtido e a meta estabelecida. A cota do BDE não está considerada neste cálculo. Para consultar o percentual, acesse a aba "Cenário Validado".</li>
+                    <li>Para escolas com mais de uma etapa, o atingimento é calculado de forma ponderada, considerando a quantidade de estudantes em cada etapa.</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+
+    <!-- Popup: WhatsApp -->
+    <div class="popup-overlay" id="popup-whatsapp" onclick="fecharPopup(event, 'popup-whatsapp')">
+        <div class="popup-conteudo" onclick="event.stopPropagation()">
+            <button class="popup-fechar" onclick="fecharPopupDireto('popup-whatsapp')" aria-label="Fechar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="popup-header">
+                <img src="app/static/img/logo-ngr.png" alt="NGR-SEE" class="popup-logo" onerror="this.style.display='none'">
+                <h3>Contato</h3>
+            </div>
+            <div class="popup-body popup-whatsapp-body">
+                <p class="popup-whatsapp-texto">Em caso de dúvidas ou identificação de possíveis inconsistências, entre em contato pelo Zaplag:</p>
+                <p class="popup-whatsapp-numero">(81) 98494-4837</p>
+                <a href="https://wa.me/5581984944837" target="_blank" rel="noopener noreferrer" class="popup-whatsapp-link">
+                    <span>Converse pelo WhatsApp</span>
+                    <small>Clique aqui</small>
+                </a>
+            </div>
+        </div>
+    </div>
 
 
 <script>
@@ -750,7 +1015,7 @@ var IDEPE_MAX = 9.2;
 var NOMES_ETAPAS = {
     ai: 'Anos Iniciais',
     af: 'Anos Finais',
-    em: 'Ensino Medio',
+    em: "Ensino Médio",
 };
 
 /**
@@ -843,7 +1108,8 @@ function simularBde(payload) {
 
     // H45 -> B40
     var percentualIdepe = converterDiferencaEmPercentual(mediaPonderada);
-    var cotaResultado = Math.min(percentualIdepe, 1.0);
+    var cotaResultado = Math.min(percentualIdepe, 1.0);                        // B40
+    var cotaAlemResultado = Math.max(percentualIdepe - cotaResultado, 0.0);    // B41
 
     // B42 / B43 / B44
     var bonusEquidade = payload.reduziu_desigualdade ? COTA_EQUIDADE : 0.0;
@@ -858,13 +1124,20 @@ function simularBde(payload) {
     );
     var percentualBde = cotaBdeCalculada + bonusParticipacao;
 
+    // Os nomes e a ordem sao os de RespostaBDE em src/bde/schemas.py. A pagina
+    // e a API tem de devolver o mesmo objeto: o wizard nao sabe de onde veio.
+    //
+    // Nota: service.py tambem passa cota_equidade, cota_elementares e
+    // cota_participacao para RespostaBDE, mas o schema nao declara esses tres
+    // campos e o Pydantic os descarta. Nao entram aqui porque nao saem de la.
     return {
         percentual_bde: percentualBde,
         percentual_formatado: Math.round(percentualBde * 100) + '%',
         apto_a_receber: percentualBde > 0.0,
-        media_ponderada_diferenca: mediaPonderada,
+        media_ponderada_variacao: mediaPonderada,
         percentual_idepe: percentualIdepe,
         cota_resultado: cotaResultado,
+        cota_alem_resultado: cotaAlemResultado,
         cota_bde_calculada: cotaBdeCalculada,
         bonus_equidade: bonusEquidade,
         bonus_elementares: bonusElementares,
@@ -887,7 +1160,7 @@ function simularBde(payload) {
 }
 
 /* ============================================================================
-   Wizard BDE — Navegacao, API e Gamificacao
+   Wizard BDE — Navegação, API e Gamificação
    ============================================================================ */
 
 const estado = {
@@ -907,8 +1180,29 @@ const estado = {
 
 document.addEventListener('DOMContentLoaded', () => {
     renderizarDots();
+    ajustarEspacoDoRodape();
     atualizarUI();
 });
+
+/**
+ * O rodape e position:fixed, e o .wizard-container reserva 80px embaixo para
+ * nao passar por baixo dele. Em tela estreita o rodape passa de 80px — os dois
+ * botoes e o credito quebram em varias linhas — e ai ele cobre o "Proximo".
+ * A 390px o rodape mede 146px e o botao da etapa de equidade fica embaixo
+ * dele, sem como ser clicado.
+ *
+ * Reserva a altura real, medida. O max(80) mantem o espaco original nas telas
+ * onde o rodape ja cabia.
+ */
+function ajustarEspacoDoRodape() {
+    const rodape = document.querySelector('.footer');
+    const container = document.querySelector('.wizard-container');
+    if (!rodape || !container) return;
+    const altura = rodape.getBoundingClientRect().height + 16;
+    container.style.paddingBottom = `${Math.max(80, Math.round(altura))}px`;
+}
+
+window.addEventListener('resize', ajustarEspacoDoRodape);
 
 function renderizarDots() {
     const c = document.getElementById('steps-dots');
@@ -921,14 +1215,25 @@ function renderizarDots() {
     }
 }
 
-let ultimoStepAnimado = null;
+function corFase(step) {
+    if (step >= 6) return 'verde';
+    if (step >= 3) return 'dourado';
+    return 'azul';
+}
+
+function corBarra(fase) {
+    if (fase === 'verde') return 'linear-gradient(90deg, #ca8a04, #16a34a)';
+    if (fase === 'dourado') return 'linear-gradient(90deg, #1a3a5c, #ca8a04)';
+    return 'linear-gradient(90deg, #1a3a5c, #2a6496)';
+}
 
 function atualizarUI() {
     const { stepAtual, totalSteps } = estado;
     const percentual = Math.round((stepAtual / (totalSteps - 1)) * 100);
 
     const barra = document.getElementById('barra-progresso');
-    barra.style.clipPath = `inset(0 ${100 - percentual}% 0 0)`;
+    barra.style.width = `${percentual}%`;
+    barra.style.background = corBarra(corFase(stepAtual));
 
     document.getElementById('lbl-etapa').textContent = `Passo ${stepAtual + 1} de ${totalSteps}`;
     document.getElementById('lbl-progresso').textContent = `${percentual}%`;
@@ -937,6 +1242,9 @@ function atualizarUI() {
         const dot = document.getElementById(`dot-${i}`);
         if (!dot) continue;
         dot.className = 'dot';
+        const fase = corFase(i);
+        if (fase === 'dourado') dot.classList.add('fase-dourado');
+        if (fase === 'verde') dot.classList.add('fase-verde');
         if (i < stepAtual) dot.classList.add('completo');
         if (i === stepAtual) dot.classList.add('ativo');
     }
@@ -947,12 +1255,9 @@ function atualizarUI() {
         stepEl.style.display = 'flex';
         stepEl.style.flexDirection = 'column';
         stepEl.style.justifyContent = 'center';
-        if (stepAtual !== ultimoStepAnimado) {
-            stepEl.style.animation = 'none';
-            stepEl.offsetHeight;
-            stepEl.style.animation = 'fadeSlideUp .35s ease-out';
-            ultimoStepAnimado = stepAtual;
-        }
+        stepEl.style.animation = 'none';
+        stepEl.offsetHeight;
+        stepEl.style.animation = 'fadeSlideUp .35s ease-out';
     }
 
     const btnVoltar = document.getElementById('btn-voltar');
@@ -975,7 +1280,7 @@ function atualizarUI() {
         };
     } else {
         btnProximo.style.display = 'flex';
-        btnProximo.textContent = 'Proximo';
+        btnProximo.textContent = 'Próximo';
         btnProximo.className = 'btn btn-proximo';
         btnProximo.disabled = !stepValido(stepAtual);
         btnProximo.onclick = proximo;
@@ -1064,19 +1369,8 @@ function validarInputsEtapa(prefixo) {
     const mat = parseFloat(document.getElementById(`inp-${prefixo}-mat`).value);
     const meta = parseFloat(document.getElementById(`inp-${prefixo}-meta`).value);
     const res = parseFloat(document.getElementById(`inp-${prefixo}-res`).value);
-
-    if (isNaN(mat) || mat < MATRICULAS_MIN || mat > MATRICULAS_MAX) {
-        mostrarErro(`Matriculas: informe um numero entre ${MATRICULAS_MIN} e ${MATRICULAS_MAX}.`);
-        return null;
-    }
-    // Faixas da validacao de dados da planilha. "Maior que zero" aceitaria 45
-    // no lugar de 4,5 e a taxa de aprovacao no lugar do indice.
-    if (isNaN(meta) || meta < IDEPE_MIN || meta > IDEPE_MAX) {
-        mostrarErro(`Meta IDEPE: informe um valor entre ${IDEPE_MIN} e ${IDEPE_MAX}.`);
-        return null;
-    }
-    if (isNaN(res) || res < IDEPE_MIN || res > IDEPE_MAX) {
-        mostrarErro(`Resultado IDEPE: informe um valor entre ${IDEPE_MIN} e ${IDEPE_MAX}.`);
+    if (!mat || mat <= 0 || isNaN(meta) || isNaN(res) || meta <= 0 || res <= 0) {
+        mostrarErro('Preencha todos os campos com valores válidos (maiores que zero).');
         return null;
     }
     return { matriculas: Math.round(mat), meta, resultado: res };
@@ -1092,24 +1386,19 @@ document.addEventListener('focusout', (e) => {
     if (stepNum === 2) prefixo = 'af';
     if (stepNum === 3) prefixo = 'em';
     if (!prefixo) return;
-    // So valida quando os tres campos tem algo digitado: sair de "Matriculas"
-    // para preencher "Meta" nao e erro, e o toast a cada tab era ruido.
-    const preenchidos = ['mat', 'meta', 'res'].every(function (campo) {
-        return document.getElementById(`inp-${prefixo}-${campo}`).value.trim() !== '';
-    });
-    if (!preenchidos) {
+    const dados = validarInputsEtapa(prefixo);
+    if (dados) {
+        estado.respostas[`etapa_${prefixo}`] = dados;
+    } else {
         estado.respostas[`etapa_${prefixo}`] = null;
-        atualizarUI();
-        return;
     }
-    estado.respostas[`etapa_${prefixo}`] = validarInputsEtapa(prefixo);
     atualizarUI();
 });
 
 /**
- * Era um POST para /api/v1/simular-bde. O Google Sites e hospedagem estatica
- * e nao roda o FastAPI, entao o calculo passou para o motor local, que
- * devolve exatamente o mesmo formato que a API devolvia.
+ * Era um POST para /api/v1/simular-bde. O Google Sites e hospedagem estatica e
+ * nao roda o FastAPI, entao o calculo passou para o motor local, que devolve
+ * exatamente o mesmo formato que a API devolvia.
  */
 function enviarSimulacao() {
     const payload = {};
@@ -1130,8 +1419,8 @@ function enviarSimulacao() {
 
 function montarResumo() {
     const r = estado.respostas;
-    const etapasNomes = { ai: 'Anos Iniciais', af: 'Anos Finais', em: 'Ensino Medio' };
-    let html = '<h2 class="resumo-titulo">Resumo das Informacoes</h2>';
+    const etapasNomes = { ai: 'Anos Iniciais', af: 'Anos Finais', em: 'Ensino Médio' };
+    let html = '<h2 class="resumo-titulo">Resumo das Informações</h2>';
 
     r.etapas_selecionadas.forEach(chave => {
         const dados = r[`etapa_${chave}`];
@@ -1142,7 +1431,7 @@ function montarResumo() {
                 <div class="resumo-item ${parseFloat(variacao) >= 0 ? 'sim' : 'nao'}">
                     <div class="resumo-icone">${parseFloat(variacao) >= 0 ? '+' : '-'}</div>
                     <div class="resumo-texto">
-                        <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | Resultado: ${dados.resultado} | Variacao: ${sinal}${variacao}
+                        <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | Resultado: ${dados.resultado} | Variação: ${sinal}${variacao}
                     </div>
                 </div>`;
         }
@@ -1155,15 +1444,15 @@ function montarResumo() {
     html += `
         <div class="resumo-item ${eq ? 'sim' : 'nao'}">
             <div class="resumo-icone">${eq ? '+' : '-'}</div>
-            <div class="resumo-texto"><strong>Equidade:</strong> ${eq ? 'Houve evolucao de PPI e renda/NSE' : 'Nao houve evolucao de equidade'}</div>
+            <div class="resumo-texto"><strong>Equidade:</strong> ${eq ? 'Houve evolução de PPI e renda/NSE' : 'Não houve evolução de equidade'}</div>
         </div>
         <div class="resumo-item ${el ? 'sim' : 'nao'}">
             <div class="resumo-icone">${el ? '+' : '-'}</div>
-            <div class="resumo-texto"><strong>Elementares:</strong> ${el ? 'Escola esta no 1 terco com menor % de elementares' : 'Escola nao esta no 1 terco'}</div>
+            <div class="resumo-texto"><strong>Elementares:</strong> ${el ? 'Escola está no 1º terço com menor % de elementares' : 'Escola não está no 1º terço'}</div>
         </div>
         <div class="resumo-item ${part ? 'sim' : 'nao'}">
             <div class="resumo-icone">${part ? '+' : '-'}</div>
-            <div class="resumo-texto"><strong>Participacao:</strong> ${part ? 'Atingiu >= 80% no SAEPE' : 'Nao atingiu 80% de participacao'}</div>
+            <div class="resumo-texto"><strong>Participação:</strong> ${part ? 'Atingiu >= 80% no SAEPE' : 'Não atingiu 80% de participação'}</div>
         </div>`;
 
     const motivos = [];
@@ -1175,12 +1464,12 @@ function montarResumo() {
         const media = diffs.reduce((a, b) => a + b, 0) / diffs.length;
         if (media >= 0.4) motivos.push('superou a meta em 0.4 pontos ou mais');
         else if (media >= 0.1) motivos.push('superou a meta');
-        else if (media >= 0) motivos.push('atingiu ou esta proximo da meta');
+        else if (media >= 0) motivos.push('atingiu ou está próximo da meta');
         else motivos.push('ficou abaixo da meta');
     }
     if (eq) motivos.push('reduziu desigualdades de PPI e renda');
-    if (el) motivos.push('esta entre as escolas com menor % de estudantes nos padroes elementares');
-    if (part) motivos.push('atingiu participacao igual ou superior a 80%');
+    if (el) motivos.push('está entre as escolas com menor % de estudantes nos padrões elementares');
+    if (part) motivos.push('atingiu participação igual ou superior a 80%');
 
     if (motivos.length > 0) {
         html += `
@@ -1236,34 +1525,52 @@ function mostrarResultado(r) {
             <span class="percentual">${r.percentual_formatado}</span>
             <span class="label-pct">BDE</span>
         </div>
-        <h2 class="resultado-titulo">${apto ? 'Escola apta a receber o BDE' : 'Escola nao atingiu o minimo'}</h2>
+        <h2 class="resultado-titulo">${apto ? 'Escola apta a receber o BDE' : 'Escola não atingiu o mínimo'}</h2>
         <p class="resultado-subtitulo">${apto
-            ? 'Confira o detalhamento do calculo do seu bonus.'
-            : 'A escola nao atingiu percentual minimo para receber o bonus.'}</p>
+            ? 'Confira o detalhamento do cálculo do seu bônus.'
+            : 'A escola não atingiu percentual mínimo para receber o bônus.'}</p>
         <div class="detalhes-grid">
-            <div class="detalhe-card">
+            <div class="detalhe-card" onclick="abrirPopupMetrica('media-idepe')" role="button" tabindex="0">
                 <div class="detalhe-valor ${clsIdepe}">${(r.percentual_idepe * 100).toFixed(0)}%</div>
-                <div class="detalhe-label">IDEPE (media)</div>
+                <div class="detalhe-label">Média IDEPE</div>
+                <div class="detalhe-info">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
             </div>
-            <div class="detalhe-card">
+            <div class="detalhe-card" onclick="abrirPopupMetrica('cota-resultado')" role="button" tabindex="0">
                 <div class="detalhe-valor">${(r.cota_resultado * 100).toFixed(0)}%</div>
                 <div class="detalhe-label">Cota Resultado</div>
+                <div class="detalhe-info">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
             </div>
-            <div class="detalhe-card">
+            <div class="detalhe-card" onclick="abrirPopupMetrica('equidade')" role="button" tabindex="0">
                 <div class="detalhe-valor ${r.bonus_equidade > 0 ? 'positivo' : 'negativo-bg'}">${(r.bonus_equidade * 100).toFixed(0)}%</div>
                 <div class="detalhe-label">Equidade</div>
+                <div class="detalhe-info">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
             </div>
-            <div class="detalhe-card">
+            <div class="detalhe-card" onclick="abrirPopupMetrica('elementares')" role="button" tabindex="0">
                 <div class="detalhe-valor ${r.bonus_elementares > 0 ? 'positivo' : 'negativo-bg'}">${(r.bonus_elementares * 100).toFixed(0)}%</div>
-                <div class="detalhe-label">Elementares</div>
+                <div class="detalhe-label">Elementares (1/3 inferior)</div>
+                <div class="detalhe-info">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
             </div>
-            <div class="detalhe-card">
+            <div class="detalhe-card" onclick="abrirPopupMetrica('participacao')" role="button" tabindex="0">
                 <div class="detalhe-valor ${r.bonus_participacao > 0 ? 'positivo' : 'negativo-bg'}">${(r.bonus_participacao * 100).toFixed(0)}%</div>
-                <div class="detalhe-label">Participacao</div>
+                <div class="detalhe-label">Participação ≥ 80%</div>
+                <div class="detalhe-info">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
             </div>
-            <div class="detalhe-card">
+            <div class="detalhe-card" onclick="abrirPopupMetrica('cota-bde')" role="button" tabindex="0">
                 <div class="detalhe-valor">${(r.cota_bde_calculada * 100).toFixed(0)}%</div>
-                <div class="detalhe-label">Cota BDE (antes part.)</div>
+                <div class="detalhe-label">Cota BDE Calculada</div>
+                <div class="detalhe-info">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </div>
             </div>
         </div>
         ${etapasHtml}
@@ -1287,7 +1594,7 @@ function reiniciar() {
     document.querySelectorAll('.btn-simnao').forEach(b => b.classList.remove('selecionado'));
     document.querySelectorAll('.input-campo input').forEach(i => i.value = '');
     document.getElementById('btn-proximo').style.display = 'flex';
-    document.getElementById('btn-proximo').textContent = 'Proximo';
+    document.getElementById('btn-proximo').textContent = 'Próximo';
     document.getElementById('btn-proximo').className = 'btn btn-proximo';
     atualizarUI();
 }
@@ -1298,6 +1605,104 @@ function mostrarErro(msg) {
     toast.classList.add('visivel');
     setTimeout(() => toast.classList.remove('visivel'), 4000);
 }
+
+/* =====================================================================
+   Popups de Métricas (Step 7)
+   ===================================================================== */
+
+const METRICAS_CONTEUDO = {
+    'media-idepe': {
+        titulo: 'Média IDEPE',
+        texto: 'A Média IDEPE é calculada a partir da variação entre o resultado obtido e a meta pactuada em cada etapa avaliada, ponderada pela quantidade de matrículas. Essa média é convertida em percentual por meio de uma tabela de conversão, onde valores de variação positivos resultam em percentuais maiores, chegando até 200%.'
+    },
+    'cota-resultado': {
+        titulo: 'Cota Resultado',
+        texto: 'A Cota Resultado é a parcela do percentual IDEPE que equivale a até 100%. Ela representa o ganho base da escola com base no desempenho do IDEPE. Se o percentual IDEPE for superior a 100%, o excedente vai para a "Cota Além do Resultado".'
+    },
+    'equidade': {
+        titulo: 'Redução de Desigualdades',
+        texto: 'Este bônus avalia se houve evolução, no SAEPE 2025, dos estudantes Pretos, Pardos e Indígenas (PPI) e daqueles de nível socioeconômico mais baixo, em comparação com 2024. Caso positivo, a escola recebe um bônus de até 100% no cálculo do BDE.'
+    },
+    'elementares': {
+        titulo: 'Elementares (1/3 inferior)',
+        texto: 'Este bônus é destinado às escolas que estão entre o primeiro terço (33,3%) com menor percentual de estudantes nos níveis elementares (PD 1 e 2), na comparação com escolas do mesmo tipo dentro da mesma Macrorregião. Caso positivo, a escola recebe um bônus de até 100%.'
+    },
+    'participacao': {
+        titulo: 'Participação ≥ 80%',
+        texto: 'As escolas que atingirem uma participação igual ou superior a 80% em todos os componentes e etapas avaliados no SAEPE terão direito a uma cota parcial adicional de até 50% no cálculo do BDE.'
+    },
+    'cota-bde': {
+        titulo: 'Cota BDE Calculada',
+        texto: 'A Cota BDE é o resultado da fórmula composta que combina a Cota Resultado, o bônus de Equidade e o bônus de Elementares. Essa cota pode chegar até 250%. A Participação é somada posteriormente ao total, podendo o BDE final ultrapassar 300%.'
+    }
+};
+
+function abrirPopupMetrica(chave) {
+    const conteudo = METRICAS_CONTEUDO[chave];
+    if (!conteudo) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'popup-overlay ativo';
+    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+
+    overlay.innerHTML = `
+        <div class="popup-conteudo popup-metrica" onclick="event.stopPropagation()">
+            <button class="popup-fechar" onclick="this.closest('.popup-overlay').remove()" aria-label="Fechar">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+            <div class="popup-header">
+                <h3>${conteudo.titulo}</h3>
+            </div>
+            <div class="popup-body">
+                <p class="popup-metrica-texto">${conteudo.texto}</p>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.addEventListener('keydown', function handler(e) {
+        if (e.key === 'Escape') {
+            overlay.remove();
+            document.removeEventListener('keydown', handler);
+        }
+    });
+}
+
+/* =====================================================================
+   Popups
+   ===================================================================== */
+
+function abrirPopup(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.classList.add('ativo');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function fecharPopup(event, id) {
+    if (event.target === event.currentTarget) {
+        fecharPopupDireto(id);
+    }
+}
+
+function fecharPopupDireto(id) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.classList.remove('ativo');
+        document.body.style.overflow = '';
+    }
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.popup-overlay.ativo').forEach(p => {
+            p.classList.remove('ativo');
+        });
+        document.body.style.overflow = '';
+    }
+});
 </script>
 </body>
 </html>

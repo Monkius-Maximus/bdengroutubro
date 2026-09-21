@@ -30,21 +30,24 @@ que impede os dois motores de divergirem em silêncio.
 | --- | --- |
 | `app/templates/index.html` + `static/css` + `static/js` servidos pelo Jinja2 | `index.html` único na raiz, com CSS e JS embutidos |
 | `POST /api/v1/simular-bde` via `fetch` | `simularBde(payload)` local, devolvendo o mesmo formato |
-| `/static/img/logo-ngr.png` (2,1 MB) | `assets/logo-ngr.png` (55 KB, 192 px) |
+| `<img src="/static/img/...">` | `<img src="app/static/img/...">`, relativo à raiz |
 | `main.py` servindo a página | `main.py` serve só a API; a página não depende dele |
 
-O fluxo, os textos, as notas de rodapé, os cartões e o selo circular são os do
-sistema original. O que mudou na interface foram três defeitos:
+**A página é gerada a partir do `app/`, não escrita à mão.** O HTML, o CSS e o
+JS de `app/` continuam sendo a fonte; `index.html` é os três num arquivo só,
+com o `fetch` trocado pelo motor local. Mexeu no `app/`, regenere o
+`index.html` — senão a página publicada congela na versão antiga.
 
-- A barra de progresso pintava o degradê no próprio elemento que cresce, com
-  `background-size: 200%`. Só a primeira metade da escala aparecia, e em tela
-  estreita a barra ficava de uma cor só. Agora o degradê ocupa a trilha inteira
-  e quem anda é o recorte (`clip-path`).
-- `atualizarUI()` reiniciava a animação de entrada a cada clique e a cada campo
-  que perdia o foco — o painel piscava o tempo todo. Agora só anima na troca de
-  passo.
-- O `focusout` disparava o toast de erro ao sair do primeiro campo, com os
-  outros dois ainda vazios. Agora só valida quando os três têm conteúdo.
+O fluxo, os textos, os popups, os cartões e o selo circular são os do sistema
+em uso. Mudou um defeito só, e ele estava nos dois:
+
+- O rodapé é `position: fixed` e o `.wizard-container` reservava `80px` embaixo
+  para não passar por baixo dele. Em tela estreita o rodapé passa de 80 px — os
+  dois botões e o crédito quebram em várias linhas — e cobre o botão "Próximo".
+  Medido a 390 px: rodapé de 146 px começando em y=714, botão terminando em
+  y=780, `elementFromPoint` devolvendo `footer`. **Na etapa de equidade não
+  havia como avançar pelo celular.** `ajustarEspacoDoRodape()` passou a reservar
+  a altura real, medida, com `Math.max(80, …)` para não mexer no desktop.
 
 ## O que a página teve de respeitar
 
@@ -53,10 +56,10 @@ Restrições do embed do Google Sites que moldaram `index.html`:
 | Restrição | Consequência no código |
 | --- | --- |
 | O conteúdo roda dentro de um iframe em origem isolada do Google | `localStorage`, `sessionStorage` e cookies podem simplesmente lançar exceção. A página não usa nenhum dos três: todo o estado vive em memória. |
-| A altura do iframe é fixada no editor e a página não consegue redimensionar o pai | Cada tela do wizard cabe em ~640 px e o que passar disso rola dentro do próprio embed. |
-| O campo "Inserir código" é uma caixa de texto para trechos curtos | Os 44 KB da página não se colam ali. A página é hospedada e o embed é só um `<iframe>` de uma linha. |
+| A altura do iframe é fixada no editor e a página não consegue redimensionar o pai | O que passar da altura do embed rola dentro dele. O rodapé fixo torna o `ajustarEspacoDoRodape()` obrigatório: sem ele o botão de avançar some sob o rodapé em embed estreito. |
+| O campo "Inserir código" é uma caixa de texto para trechos curtos | Os 60 KB da página não se colam ali. A página é hospedada e o embed é só um `<iframe>` de uma linha. |
 | A largura do embed varia com o tema e o dispositivo | Layout fluido, com quebra para coluna única abaixo de 460 px. |
-| Recursos externos podem ser bloqueados ou ficar lentos | Zero dependências: nenhuma fonte do Google Fonts, nenhuma biblioteca de CDN. Só a página e o logo. |
+| Recursos externos podem ser bloqueados ou ficar lentos | Zero dependências: nenhuma fonte do Google Fonts, nenhuma biblioteca de CDN. Só a página e o logo — 116 KB no total. |
 
 ## Passo a passo
 
@@ -74,6 +77,12 @@ O `index.html` está na **raiz** do repositório de propósito: o GitHub Pages s
 `index.html` da raiz nesse endereço direto. Se o arquivo estivesse numa subpasta,
 esse endereço cairia no `README.md` renderizado — que é uma página de
 documentação, não o simulador.
+
+> **Se o endereço mostrar o README,** é sempre a mesma causa: a branch escolhida
+> em *Settings → Pages* não tem `index.html` na raiz. Já aconteceu — a página
+> vivia numa branch, a `main` recebeu o `app/` do FastAPI sem a versão estática,
+> e o Pages passou a servir a documentação. Confira em qual branch o Pages está
+> apontado e se aquela branch tem o `index.html` na raiz.
 
 ### 2. Embutir no site
 
@@ -99,12 +108,26 @@ rode o teste de paridade antes de publicar:
 python3 tests/test_paridade.py
 ```
 
-Ele compara 400 casos entre `src/bde/service.py` e o JavaScript de
-`index.html`, varrendo os limites de faixa de H45 — onde 0,0001 de diferença
-vale 25 pontos percentuais de bônus.
+Ele compara 552 casos entre `src/bde/service.py` e o JavaScript de
+`index.html` — a resposta inteira, campo a campo, inclusive os nomes —
+varrendo os limites da tabela de conversão, onde 0,01 na média ponderada vale
+25 pontos percentuais de bônus.
 
-Foi exatamente esse tipo de desencontro que quebrou a versão anterior: os
-schemas foram renomeados no backend (`bonus_equidade` → `cota_equidade`,
-`participacao_maior_80` → `participacao_minima_atingida`) sem o frontend junto,
-que morava em outro repositório. O teste existe para que isso reprove aqui em
-vez de aparecer como `NaN%` na tela do gestor.
+O teste existe porque esse desencontro já aconteceu duas vezes. Uma, quando os
+schemas foram renomeados no backend sem o frontend junto, que morava em outro
+repositório: 422 no POST e `NaN%` nos cartões. Outra, neste porte, quando o
+motor da página devolvia `media_ponderada_diferenca` e o contrato pedia
+`media_ponderada_variacao` — o wizard não lê esse campo, então nada aparecia
+quebrado na tela, e só o teste pegou.
+
+### Regenerar a página
+
+Depois de mexer em `app/templates/index.html`, `app/static/css/estilo.css` ou
+`app/static/js/wizard.js`:
+
+1. Junte os três em `index.html`, trocando os caminhos `/static/...` por
+   `app/static/...` e o `fetch('/api/v1/simular-bde')` pela chamada a
+   `simularBde(payload)`.
+2. Rode `python3 tests/test_paridade.py`.
+3. Confira a página no navegador em largura de celular, porque é lá que o
+   rodapé fixo cobre os botões.
