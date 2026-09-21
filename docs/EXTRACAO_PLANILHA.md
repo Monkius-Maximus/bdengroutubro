@@ -93,32 +93,62 @@ de negócio.
 Três achados. O primeiro é decisivo e precisa de decisão de negócio antes de
 escrevermos o `BDECalculatorService`.
 
-### 5.1 `C45` não trata os bônus como cumulativos — DECIDIDO: reproduzir
+### 5.1 `C45` não trata os bônus como cumulativos — SUPERADO no ciclo 2026
 
-A regra declarada diz "independentes e cumulativos". A fórmula usa
-`OR(B42=1; B43=1)`: **ter as duas condições vale o mesmo que ter uma só**,
-exceto no caso único em que o IDEPE é exatamente 200%. Além disso, `B41` é
-descartada no caminho normal. Divergem 20 das 28 combinações.
+**Registro histórico. Esta seção descreve a regra até o ciclo 2025.**
 
-**Decisão: reproduzir a planilha**, por ser mecanismo já validado e em uso na
-SEPLAG. O simulador web deve devolver o mesmo número que o gestor vê na
-planilha aberta na outra janela.
+A fórmula `C45` usava `OR(B42=1; B43=1)`: ter as duas condições de equidade
+valia o mesmo que ter uma só, exceto no caso único em que o IDEPE era
+exatamente 200%. `B41` era descartada no caminho normal. Divergiam 20 das 28
+combinações em relação à regra declarada, que dizia "independentes e
+cumulativos".
 
-O 3º ramo (`(B40+B41)>1 → 2`) é **inalcançável e redundante**. Inalcançável
-porque `B40` é `min(H45; 1)`, logo `B40<=1` é sempre verdadeiro e o 2º ramo
-captura antes. Redundante porque, se fosse alcançado, devolveria `2` — o mesmo
-que `1+B40` com `B40=1`. Logo `C45` reduz, **sem perda de fidelidade**, a:
+A decisão de então foi **reproduzir a planilha**, por ser mecanismo já validado
+e em uso na SEPLAG.
+
+**No ciclo 2026 a regra passou a somar**, por determinação do gestor da regra:
+cada quesito de equidade atingido vale +100%, os dois valem +200%, e isso vale
+para toda escola — inclusive a que não atingiu os 80% de participação e ficou
+sem IDEPE. A `C45` e seus quatro ramos saíram do código.
+
+**A consequência precisa estar clara para quem atende o gestor:** a planilha em
+circulação e o simulador passam a divergir de propósito. Uma escola com IDEPE
+de 100% e os dois quesitos de equidade vê 250% na planilha e 300% aqui. Quem
+manda é a regra do ciclo 2026; a planilha é que está desatualizada.
+
+O total passou a ser:
 
 ```python
-if cota_resultado == 1.0 and cota_alem == 1.0 and equidade and elementares:
-    return 2.5
-if equidade or elementares:
-    return 1.0 + cota_resultado
-return cota_resultado
+cota_resultado = min(percentual_idepe, 1.0)
+cota_bde = cota_resultado + (1.0 se equidade) + (1.0 se elementares)
+percentual_bde = min(cota_bde + (0.5 se alguma etapa com 80%), 3.0)
 ```
 
-Equivalência verificada em 804 combinações contínuas e nas 36 discretas: zero
-divergências.
+Registro do que ficou para trás: o 3º ramo da `C45` (`(B40+B41)>1 → 2`) era
+**inalcançável e redundante** — inalcançável porque `B40` é `min(H45; 1)`, logo
+`B40<=1` era sempre verdadeiro e o 2º ramo capturava antes; redundante porque,
+se fosse alcançado, devolveria `2`, o mesmo que `1+B40` com `B40=1`.
+
+### 5.1-b A participação virou portão, e é por etapa — NOVO no ciclo 2026
+
+Até o ciclo 2025 a participação era uma pergunta única da escola e apenas somava
+`B44` (+50%). No ciclo 2026 ela é perguntada **por etapa** e decide se a etapa
+tem IDEPE:
+
+- Etapa sem 80% não tem IDEPE divulgado. Não se pergunta meta nem resultado
+  dela, e ela entra na conta com **0% de atingimento**, pesando pelas suas
+  matrículas.
+- A média ponderada (`H47`) roda **só entre as etapas aprovadas**, porque só
+  elas têm variação. O percentual convertido é então reduzido na proporção das
+  matrículas que ficaram de fora.
+- O +50% continua existindo e basta **uma** etapa atingir os 80% para a escola
+  somá-lo.
+
+A ordem importa: a diluição acontece **depois** da conversão, não antes. Uma
+etapa sem meta e sem resultado não tem variação para entrar no `H47`. Com essa
+ordem, escola com todas as etapas aprovadas devolve exatamente o mesmo
+`percentual_idepe` do ciclo anterior — a regressão está travada em
+`tests/test_cenarios.py`, cenário F.
 
 ### 5.2 Buraco na faixa (−0,3; −0,2) em `H45` — DECIDIDO: ler a grade
 

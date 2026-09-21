@@ -122,12 +122,23 @@ quebrado na tela, e só o teste pegou.
 
 ### Regenerar a página
 
-Depois de mexer em `app/templates/index.html`, `app/static/css/estilo.css` ou
-`app/static/js/wizard.js`:
+Depois de mexer em qualquer arquivo de `app/`:
 
-1. Junte os três em `index.html`, trocando os caminhos `/static/...` por
-   `app/static/...` e o `fetch('/api/v1/simular-bde')` pela chamada a
-   `simularBde(payload)`.
-2. Rode `python3 tests/test_paridade.py`.
-3. Confira a página no navegador em largura de celular, porque é lá que o
-   rodapé fixo cobre os botões.
+```bash
+python3 tools/gerar_index.py
+python3 tests/test_paridade.py
+python3 tests/test_cenarios.py
+```
+
+O gerador junta `app/templates/index.html`, `app/static/css/estilo.css`,
+`app/static/js/motor.js` e `app/static/js/wizard.js` num arquivo só, troca os
+caminhos `/static/...` por `app/static/...` e substitui o
+`fetch('/api/v1/simular-bde')` pela chamada a `simularBde(payload)`. Se o `app/`
+mudar de um jeito que ele não reconheça, ele falha dizendo qual trecho sumiu —
+em vez de publicar uma página diferente da que o FastAPI serve.
+
+A regra do BDE vive em dois lugares: `src/bde/service.py` e
+`app/static/js/motor.js`. Mudou num, mude no outro e rode os dois testes.
+
+Confira também no navegador em largura de celular, porque é lá que o rodapé
+fixo cobre os botões.
