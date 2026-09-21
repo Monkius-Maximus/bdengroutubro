@@ -2,10 +2,21 @@
    Wizard BDE — Navegação, API e Gamificação
    ============================================================================ */
 
+/* Indices fixos no template. O numero de telas visiveis varia com as etapas
+   pactuadas, entao quem manda no progresso e passosVisiveis(), nao o indice. */
+const PASSO_ETAPAS = 0;
+const PASSO_EQUIDADE = 4;
+const PASSO_RESUMO = 5;
+const PASSO_RESULTADO = 6;
+
+const PASSO_DA_ETAPA = { ai: 1, af: 2, em: 3 };
+
 const estado = {
     stepAtual: 0,
-    totalSteps: 8,
     resultadoApi: null,
+    /* A participacao vive fora de respostas.etapa_* porque e respondida antes
+       de a etapa estar completa — e a etapa so vira objeto quando valida. */
+    participacao: { ai: null, af: null, em: null },
     respostas: {
         etapas_selecionadas: [],
         etapa_ai: null,
@@ -13,12 +24,21 @@ const estado = {
         etapa_em: null,
         reduziu_desigualdade: null,
         terco_menor_elementares: null,
-        participacao_maior_80: null,
     },
 };
 
+/** Telas efetivamente alcancaveis, na ordem. */
+function passosVisiveis() {
+    const passos = [PASSO_ETAPAS];
+    ['ai', 'af', 'em'].forEach((chave) => {
+        if (estado.respostas.etapas_selecionadas.includes(chave)) {
+            passos.push(PASSO_DA_ETAPA[chave]);
+        }
+    });
+    return passos.concat([PASSO_EQUIDADE, PASSO_RESUMO, PASSO_RESULTADO]);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-    renderizarDots();
     ajustarEspacoDoRodape();
     atualizarUI();
 });
@@ -43,10 +63,13 @@ function ajustarEspacoDoRodape() {
 
 window.addEventListener('resize', ajustarEspacoDoRodape);
 
-function renderizarDots() {
+/* Redesenhado a cada atualizacao porque a quantidade de telas muda conforme
+   as etapas pactuadas. */
+function renderizarDots(total) {
     const c = document.getElementById('steps-dots');
+    if (c.childElementCount === total) return;
     c.innerHTML = '';
-    for (let i = 0; i < estado.totalSteps; i++) {
+    for (let i = 0; i < total; i++) {
         const d = document.createElement('div');
         d.className = 'dot';
         d.id = `dot-${i}`;
@@ -54,9 +77,10 @@ function renderizarDots() {
     }
 }
 
-function corFase(step) {
-    if (step >= 6) return 'verde';
-    if (step >= 3) return 'dourado';
+function corFase(pos, total) {
+    const fracao = total > 1 ? pos / (total - 1) : 1;
+    if (fracao >= 2 / 3) return 'verde';
+    if (fracao >= 1 / 3) return 'dourado';
     return 'azul';
 }
 
@@ -67,25 +91,30 @@ function corBarra(fase) {
 }
 
 function atualizarUI() {
-    const { stepAtual, totalSteps } = estado;
-    const percentual = Math.round((stepAtual / (totalSteps - 1)) * 100);
+    const { stepAtual } = estado;
+    const visiveis = passosVisiveis();
+    const totalSteps = visiveis.length;
+    const pos = Math.max(0, visiveis.indexOf(stepAtual));
+    const percentual = totalSteps > 1 ? Math.round((pos / (totalSteps - 1)) * 100) : 100;
+
+    renderizarDots(totalSteps);
 
     const barra = document.getElementById('barra-progresso');
     barra.style.width = `${percentual}%`;
-    barra.style.background = corBarra(corFase(stepAtual));
+    barra.style.background = corBarra(corFase(pos, totalSteps));
 
-    document.getElementById('lbl-etapa').textContent = `Passo ${stepAtual + 1} de ${totalSteps}`;
+    document.getElementById('lbl-etapa').textContent = `Passo ${pos + 1} de ${totalSteps}`;
     document.getElementById('lbl-progresso').textContent = `${percentual}%`;
 
     for (let i = 0; i < totalSteps; i++) {
         const dot = document.getElementById(`dot-${i}`);
         if (!dot) continue;
         dot.className = 'dot';
-        const fase = corFase(i);
+        const fase = corFase(i, totalSteps);
         if (fase === 'dourado') dot.classList.add('fase-dourado');
         if (fase === 'verde') dot.classList.add('fase-verde');
-        if (i < stepAtual) dot.classList.add('completo');
-        if (i === stepAtual) dot.classList.add('ativo');
+        if (i < pos) dot.classList.add('completo');
+        if (i === pos) dot.classList.add('ativo');
     }
 
     document.querySelectorAll('.step').forEach(s => s.style.display = 'none');
@@ -102,8 +131,8 @@ function atualizarUI() {
     const btnVoltar = document.getElementById('btn-voltar');
     const btnProximo = document.getElementById('btn-proximo');
 
-    const ehResultado = stepAtual === 7;
-    const ehResumo = stepAtual === 6;
+    const ehResultado = stepAtual === PASSO_RESULTADO;
+    const ehResumo = stepAtual === PASSO_RESUMO;
 
     btnVoltar.style.display = stepAtual > 0 && !ehResultado ? 'flex' : 'none';
 
@@ -128,14 +157,13 @@ function atualizarUI() {
 
 function stepValido(step) {
     switch (step) {
-        case 0: return estado.respostas.etapas_selecionadas.length > 0;
+        case PASSO_ETAPAS: return estado.respostas.etapas_selecionadas.length > 0;
         case 1: return estado.respostas.etapa_ai !== null;
         case 2: return estado.respostas.etapa_af !== null;
         case 3: return estado.respostas.etapa_em !== null;
-        case 4:
+        case PASSO_EQUIDADE:
             return estado.respostas.reduziu_desigualdade !== null
                 && estado.respostas.terco_menor_elementares !== null;
-        case 5: return estado.respostas.participacao_maior_80 !== null;
         default: return true;
     }
 }
@@ -143,13 +171,13 @@ function stepValido(step) {
 function proximo() {
     if (!stepValido(estado.stepAtual)) return;
 
-    if (estado.stepAtual === 5) {
+    if (estado.stepAtual === PASSO_EQUIDADE) {
         enviarSimulacao();
         return;
     }
 
     estado.stepAtual++;
-    while (devePularStep(estado.stepAtual) && estado.stepAtual < 6) {
+    while (devePularStep(estado.stepAtual) && estado.stepAtual < PASSO_RESUMO) {
         estado.stepAtual++;
     }
     atualizarUI();
@@ -197,22 +225,70 @@ function toggleSimNaoPergunta(btn) {
     atualizarUI();
 }
 
-function toggleSimNao(card, valor) {
-    card.parentElement.querySelectorAll('.opcao-card').forEach(c => c.classList.remove('selecionado'));
-    card.classList.add('selecionado');
-    estado.respostas.participacao_maior_80 = valor;
-    atualizarUI();
+/**
+ * Participacao da etapa. E um portao: no Sim aparecem meta e resultado; no Nao
+ * eles somem, porque o IDEPE da etapa nao e divulgado, e entra o aviso de que
+ * ela ainda pesa na conta com 0% de atingimento.
+ */
+function toggleParticipacaoEtapa(btn) {
+    const prefixo = btn.dataset.campo;
+    const participou = btn.dataset.valor === 'true';
+
+    btn.parentElement.querySelectorAll('.btn-simnao').forEach(b => b.classList.remove('selecionado'));
+    btn.classList.add('selecionado');
+
+    estado.participacao[prefixo] = participou;
+    document.getElementById(`idepe-${prefixo}`).style.display = participou ? 'flex' : 'none';
+    document.getElementById(`aviso-${prefixo}`).style.display = participou ? 'none' : 'block';
+
+    if (!participou) {
+        document.getElementById(`inp-${prefixo}-meta`).value = '';
+        document.getElementById(`inp-${prefixo}-res`).value = '';
+    }
+
+    recalcularEtapa(prefixo, true);
+    ajustarEspacoDoRodape();
 }
 
-function validarInputsEtapa(prefixo) {
+/**
+ * `silencioso` existe porque a validacao roda tambem em momentos em que o
+ * campo vazio e o estado normal — logo apos marcar "Sim" na participacao, por
+ * exemplo, quando meta e resultado ainda nem apareceram na tela. Reclamar ali
+ * seria acusar a pessoa de nao ter digitado o que acabou de surgir.
+ */
+function validarInputsEtapa(prefixo, silencioso = false) {
+    const reclamar = (msg) => { if (!silencioso) mostrarErro(msg); return null; };
+
+    const participou = estado.participacao[prefixo];
+    if (participou === null) return null;
+
     const mat = parseFloat(document.getElementById(`inp-${prefixo}-mat`).value);
+    if (!mat || mat <= 0) {
+        return reclamar('Informe as matrículas da etapa (maior que zero).');
+    }
+
+    // Etapa sem 80% nao tem IDEPE divulgado: matricula e tudo que existe dela.
+    if (!participou) {
+        return { matriculas: Math.round(mat), participacao_maior_80: false };
+    }
+
     const meta = parseFloat(document.getElementById(`inp-${prefixo}-meta`).value);
     const res = parseFloat(document.getElementById(`inp-${prefixo}-res`).value);
-    if (!mat || mat <= 0 || isNaN(meta) || isNaN(res) || meta <= 0 || res <= 0) {
-        mostrarErro('Preencha todos os campos com valores válidos (maiores que zero).');
-        return null;
+    if (isNaN(meta) || isNaN(res) || meta <= 0 || res <= 0) {
+        return reclamar('Preencha meta e resultado IDEPE com valores válidos (maiores que zero).');
     }
-    return { matriculas: Math.round(mat), meta, resultado: res };
+    return {
+        matriculas: Math.round(mat),
+        participacao_maior_80: true,
+        meta,
+        resultado: res,
+    };
+}
+
+/** Revalida a etapa e guarda o objeto (ou null) em estado.respostas. */
+function recalcularEtapa(prefixo, silencioso = false) {
+    estado.respostas[`etapa_${prefixo}`] = validarInputsEtapa(prefixo, silencioso);
+    atualizarUI();
 }
 
 document.addEventListener('focusout', (e) => {
@@ -225,13 +301,20 @@ document.addEventListener('focusout', (e) => {
     if (stepNum === 2) prefixo = 'af';
     if (stepNum === 3) prefixo = 'em';
     if (!prefixo) return;
-    const dados = validarInputsEtapa(prefixo);
-    if (dados) {
-        estado.respostas[`etapa_${prefixo}`] = dados;
-    } else {
+
+    // So valida quando os campos esperados tem algo digitado: sair de
+    // "Matriculas" para preencher "Meta" nao e erro, e o toast a cada tab era
+    // ruido. Etapa sem participacao espera so a matricula.
+    const esperados = estado.participacao[prefixo] ? ['mat', 'meta', 'res'] : ['mat'];
+    const preenchidos = esperados.every(function (campo) {
+        return document.getElementById(`inp-${prefixo}-${campo}`).value.trim() !== '';
+    });
+    if (!preenchidos) {
         estado.respostas[`etapa_${prefixo}`] = null;
+        atualizarUI();
+        return;
     }
-    atualizarUI();
+    recalcularEtapa(prefixo);
 });
 
 async function enviarSimulacao() {
@@ -245,7 +328,7 @@ async function enviarSimulacao() {
     if (estado.respostas.etapas_selecionadas.includes('em')) payload.etapa_em = estado.respostas.etapa_em;
     payload.reduziu_desigualdade = estado.respostas.reduziu_desigualdade;
     payload.terco_menor_elementares = estado.respostas.terco_menor_elementares;
-    payload.participacao_maior_80 = estado.respostas.participacao_maior_80;
+    // A participacao vai dentro de cada etapa, nao mais solta no payload.
 
     try {
         const resp = await fetch('/api/v1/simular-bde', {
@@ -273,22 +356,36 @@ function montarResumo() {
 
     r.etapas_selecionadas.forEach(chave => {
         const dados = r[`etapa_${chave}`];
-        if (dados) {
-            const variacao = (dados.resultado - dados.meta).toFixed(2);
-            const sinal = parseFloat(variacao) >= 0 ? '+' : '';
+        if (!dados) return;
+
+        if (!dados.participacao_maior_80) {
             html += `
-                <div class="resumo-item ${parseFloat(variacao) >= 0 ? 'sim' : 'nao'}">
-                    <div class="resumo-icone">${parseFloat(variacao) >= 0 ? '+' : '-'}</div>
+                <div class="resumo-item nao">
+                    <div class="resumo-icone">-</div>
                     <div class="resumo-texto">
-                        <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | Resultado: ${dados.resultado} | Variação: ${sinal}${variacao}
+                        <strong>${etapasNomes[chave]}</strong> — Sem participação de 80%: IDEPE não divulgado. Entra com 0% de atingimento, pesando ${dados.matriculas} matrículas.
                     </div>
                 </div>`;
+            return;
         }
+
+        const variacao = (dados.resultado - dados.meta).toFixed(2);
+        const sinal = parseFloat(variacao) >= 0 ? '+' : '';
+        html += `
+            <div class="resumo-item ${parseFloat(variacao) >= 0 ? 'sim' : 'nao'}">
+                <div class="resumo-icone">${parseFloat(variacao) >= 0 ? '+' : '-'}</div>
+                <div class="resumo-texto">
+                    <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | Resultado: ${dados.resultado} | Variação: ${sinal}${variacao}
+                </div>
+            </div>`;
     });
 
     const eq = r.reduziu_desigualdade;
     const el = r.terco_menor_elementares;
-    const part = r.participacao_maior_80;
+    const part = ['ai', 'af', 'em'].some((chave) => {
+        const d = r[`etapa_${chave}`];
+        return d && d.participacao_maior_80;
+    });
 
     html += `
         <div class="resumo-item ${eq ? 'sim' : 'nao'}">
@@ -301,20 +398,24 @@ function montarResumo() {
         </div>
         <div class="resumo-item ${part ? 'sim' : 'nao'}">
             <div class="resumo-icone">${part ? '+' : '-'}</div>
-            <div class="resumo-texto"><strong>Participação:</strong> ${part ? 'Atingiu >= 80% no SAEPE' : 'Não atingiu 80% de participação'}</div>
+            <div class="resumo-texto"><strong>Participação:</strong> ${part ? 'Ao menos uma etapa atingiu >= 80% no SAEPE' : 'Nenhuma etapa atingiu 80% de participação'}</div>
         </div>`;
 
     const motivos = [];
-    if (r.etapas_selecionadas.length > 0) {
-        const diffs = r.etapas_selecionadas.map(k => {
-            const d = r[`etapa_${k}`];
-            return d ? d.resultado - d.meta : 0;
-        });
+    // So as etapas com 80% tem IDEPE para comparar com a meta.
+    const comIdepe = r.etapas_selecionadas
+        .map((k) => r[`etapa_${k}`])
+        .filter((d) => d && d.participacao_maior_80);
+
+    if (comIdepe.length > 0) {
+        const diffs = comIdepe.map((d) => d.resultado - d.meta);
         const media = diffs.reduce((a, b) => a + b, 0) / diffs.length;
         if (media >= 0.4) motivos.push('superou a meta em 0.4 pontos ou mais');
         else if (media >= 0.1) motivos.push('superou a meta');
         else if (media >= 0) motivos.push('atingiu ou está próximo da meta');
         else motivos.push('ficou abaixo da meta');
+    } else {
+        motivos.push('não teve IDEPE divulgado em nenhuma etapa, por falta de participação');
     }
     if (eq) motivos.push('reduziu desigualdades de PPI e renda');
     if (el) motivos.push('está entre as escolas com menor % de estudantes nos padrões elementares');
@@ -332,7 +433,7 @@ function montarResumo() {
 }
 
 function mostrarResumo() {
-    estado.stepAtual = 6;
+    estado.stepAtual = PASSO_RESUMO;
     document.getElementById('resumo-area').innerHTML = montarResumo();
     atualizarUI();
 }
@@ -344,7 +445,7 @@ function corKPI(valor) {
 }
 
 function mostrarResultado(r) {
-    estado.stepAtual = 7;
+    estado.stepAtual = PASSO_RESULTADO;
     atualizarUI();
 
     const apto = r.apto_a_receber;
@@ -358,6 +459,16 @@ function mostrarResultado(r) {
     if (r.etapas && r.etapas.length > 0) {
         etapasHtml = '<div class="etapas-detalhe">';
         r.etapas.forEach(e => {
+            // variacao nula e etapa sem IDEPE divulgado — diferente de zero,
+            // que e a etapa que participou e empatou com a meta.
+            if (e.variacao === null || e.variacao === undefined) {
+                etapasHtml += `
+                <div class="etapa-detalhe">
+                    <span class="etapa-nome">${e.nome}</span>
+                    <span class="etapa-variacao negativo">Sem participação (0%)</span>
+                </div>`;
+                return;
+            }
             const cls = e.variacao > 0 ? 'positivo' : e.variacao === 0 ? 'neutro' : 'negativo';
             const sinal = e.variacao > 0 ? '+' : '';
             etapasHtml += `
@@ -428,8 +539,9 @@ function mostrarResultado(r) {
 }
 
 function reiniciar() {
-    estado.stepAtual = 0;
+    estado.stepAtual = PASSO_ETAPAS;
     estado.resultadoApi = null;
+    estado.participacao = { ai: null, af: null, em: null };
     estado.respostas = {
         etapas_selecionadas: [],
         etapa_ai: null,
@@ -437,11 +549,14 @@ function reiniciar() {
         etapa_em: null,
         reduziu_desigualdade: null,
         terco_menor_elementares: null,
-        participacao_maior_80: null,
     };
     document.querySelectorAll('.opcao-card').forEach(c => c.classList.remove('selecionado'));
     document.querySelectorAll('.btn-simnao').forEach(b => b.classList.remove('selecionado'));
     document.querySelectorAll('.input-campo input').forEach(i => i.value = '');
+    ['ai', 'af', 'em'].forEach((prefixo) => {
+        document.getElementById(`idepe-${prefixo}`).style.display = 'none';
+        document.getElementById(`aviso-${prefixo}`).style.display = 'none';
+    });
     document.getElementById('btn-proximo').style.display = 'flex';
     document.getElementById('btn-proximo').textContent = 'Próximo';
     document.getElementById('btn-proximo').className = 'btn btn-proximo';
@@ -462,27 +577,27 @@ function mostrarErro(msg) {
 const METRICAS_CONTEUDO = {
     'media-idepe': {
         titulo: 'Média IDEPE',
-        texto: 'A Média IDEPE é calculada a partir da variação entre o resultado obtido e a meta pactuada em cada etapa avaliada, ponderada pela quantidade de matrículas. Essa média é convertida em percentual por meio de uma tabela de conversão, onde valores de variação positivos resultam em percentuais maiores, chegando até 200%.'
+        texto: 'A Média IDEPE parte da variação entre o resultado obtido e a meta pactuada, ponderada pelas matrículas, e é convertida em percentual por uma tabela — variações positivas rendem percentuais maiores, até 200%. Só entram nessa média as etapas que atingiram 80% de participação, porque as demais não têm IDEPE divulgado. O percentual resultante é então reduzido na proporção das matrículas que ficaram de fora: uma etapa sem participação não some da conta, ela entra com 0%.'
     },
     'cota-resultado': {
         titulo: 'Cota Resultado',
-        texto: 'A Cota Resultado é a parcela do percentual IDEPE que equivale a até 100%. Ela representa o ganho base da escola com base no desempenho do IDEPE. Se o percentual IDEPE for superior a 100%, o excedente vai para a "Cota Além do Resultado".'
+        texto: 'A Cota Resultado é a parcela do percentual IDEPE que equivale a até 100%, e representa o ganho base pelo desempenho. Se o percentual IDEPE passar de 100%, o excedente vai para a "Cota Além do Resultado" e não entra na soma do BDE — superar muito a meta não aumenta o bônus.'
     },
     'equidade': {
         titulo: 'Redução de Desigualdades',
-        texto: 'Este bônus avalia se houve evolução, no SAEPE 2025, dos estudantes Pretos, Pardos e Indígenas (PPI) e daqueles de nível socioeconômico mais baixo, em comparação com 2024. Caso positivo, a escola recebe um bônus de até 100% no cálculo do BDE.'
+        texto: 'Este bônus avalia se houve evolução, no SAEPE 2026, dos estudantes Pretos, Pardos e Indígenas (PPI) e daqueles de nível socioeconômico mais baixo, em comparação com 2025. Caso positivo, a escola soma 100% ao cálculo do BDE. Vale para qualquer escola, tenha ela atingido ou não os 80% de participação — é a única parcela que sobra para quem ficou sem IDEPE.'
     },
     'elementares': {
         titulo: 'Elementares (1/3 inferior)',
-        texto: 'Este bônus é destinado às escolas que estão entre o primeiro terço (33,3%) com menor percentual de estudantes nos níveis elementares (PD 1 e 2), na comparação com escolas do mesmo tipo dentro da mesma Macrorregião. Caso positivo, a escola recebe um bônus de até 100%.'
+        texto: 'Este bônus é destinado às escolas que estão entre o primeiro terço (33,3%) com menor percentual de estudantes nos níveis elementares (PD 1 e 2), na comparação com escolas do mesmo tipo dentro da mesma Macrorregião. Caso positivo, a escola soma outros 100%. Os dois quesitos de equidade somam entre si: atingir os dois vale 200%.'
     },
     'participacao': {
         titulo: 'Participação ≥ 80%',
-        texto: 'As escolas que atingirem uma participação igual ou superior a 80% em todos os componentes e etapas avaliados no SAEPE terão direito a uma cota parcial adicional de até 50% no cálculo do BDE.'
+        texto: 'A participação é verificada por etapa e funciona como condição para o IDEPE: etapa que não atinge 80% não tem resultado divulgado e entra no cálculo com 0% de atingimento. Além disso, basta uma etapa atingir os 80% para a escola somar uma cota adicional de 50% no BDE.'
     },
     'cota-bde': {
         titulo: 'Cota BDE Calculada',
-        texto: 'A Cota BDE é o resultado da fórmula composta que combina a Cota Resultado, o bônus de Equidade e o bônus de Elementares. Essa cota pode chegar até 250%. A Participação é somada posteriormente ao total, podendo o BDE final ultrapassar 300%.'
+        texto: 'A Cota BDE soma a Cota Resultado (até 100%) com os bônus de Equidade e de Elementares (100% cada), chegando a até 300%. A Participação acrescenta mais 50% ao total, que é então limitado ao teto de 300% do BDE.'
     }
 };
 

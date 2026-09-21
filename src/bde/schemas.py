@@ -35,27 +35,67 @@ from pydantic import BaseModel, Field, model_validator
 class EtapaIDEPE(BaseModel):
     """
     Dados de uma etapa letiva para cálculo do IDEPE.
-    Cada etapa possui matrículas (peso), meta pactuada e resultado obtido.
+
+    A participação é por etapa e funciona como portão: etapa que não atingiu
+    80% não tem IDEPE divulgado, então não tem meta nem resultado a informar.
+    Ela continua existindo para a escola — entra na conta com atingimento zero
+    e com o peso das suas matrículas.
     """
 
     matriculas: int = Field(
         ...,
         gt=0,
         description=(
-            "Quantidade de matrículas na etapa. "
-            "Usado como peso no cálculo da média ponderada."
+            "Quantidade de matrículas na etapa. Peso na média ponderada. "
+            "Obrigatório mesmo quando a etapa não atingiu 80% de participação, "
+            "porque é o que dosa o impacto dela na nota final."
         ),
     )
-    meta: float = Field(
+    participacao_maior_80: bool = Field(
         ...,
-        gt=0,
-        description="Meta IDEPE pactuada para a etapa (ex: 4.50).",
+        description=(
+            "A etapa atingiu participação igual ou superior a 80% em todos os "
+            "componentes avaliados no SAEPE? (SIM / NÃO)"
+        ),
     )
-    resultado: float = Field(
-        ...,
+    meta: Optional[float] = Field(
+        None,
         gt=0,
-        description="Resultado IDEPE obtido pela escola (ex: 4.70).",
+        description=(
+            "Meta IDEPE pactuada para a etapa (ex: 4.50). Só existe quando a "
+            "etapa atingiu 80% de participação."
+        ),
     )
+    resultado: Optional[float] = Field(
+        None,
+        gt=0,
+        description=(
+            "Resultado IDEPE obtido pela escola (ex: 4.70). Só existe quando a "
+            "etapa atingiu 80% de participação."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def _meta_e_resultado_seguem_a_participacao(self):
+        """
+        Sem os dois juntos, a etapa entraria na média ponderada com meia
+        informação. Com eles numa etapa reprovada, o simulador estaria usando
+        um IDEPE que não foi divulgado.
+        """
+        tem_meta = self.meta is not None
+        tem_resultado = self.resultado is not None
+
+        if self.participacao_maior_80 and not (tem_meta and tem_resultado):
+            raise ValueError(
+                "Etapa com participação igual ou superior a 80% exige meta e "
+                "resultado IDEPE."
+            )
+        if not self.participacao_maior_80 and (tem_meta or tem_resultado):
+            raise ValueError(
+                "Etapa sem 80% de participação não tem IDEPE divulgado: "
+                "informe apenas as matrículas."
+            )
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -86,9 +126,9 @@ class RequisicaoBDE(BaseModel):
     reduziu_desigualdade: bool = Field(
         ...,
         description=(
-            "Houve evolução, no SAEPE 2025, dos estudantes "
+            "Houve evolução, no SAEPE 2026, dos estudantes "
             "Pretos, Pardos e Indígenas (PPI) e daqueles de "
-            "nível socioeconômico mais baixo, em comparação com 2024? "
+            "nível socioeconômico mais baixo, em comparação com 2025? "
             "(SIM / NÃO)"
         ),
     )
@@ -100,19 +140,11 @@ class RequisicaoBDE(BaseModel):
             "Na Macrorregião, comparando com escolas do mesmo tipo, "
             "sua escola está entre o 1º terço (33,3%) com menor "
             "percentual de estudantes nos níveis elementares (PD 1 e 2) "
-            "no SAEPE 2025? (SIM / NÃO)"
+            "no SAEPE 2026? (SIM / NÃO)"
         ),
     )
 
-    # ---- Participação ----
-    participacao_maior_80: bool = Field(
-        ...,
-        description=(
-            "A escola atingiu participação igual ou superior a 80% "
-            "em TODOS os componentes e etapas avaliados no SAEPE 2026? "
-            "(SIM / NÃO)"
-        ),
-    )
+    # A participação saiu daqui: virou campo de cada EtapaIDEPE.
 
     @model_validator(mode="after")
     def _pelo_menos_uma_etapa(self):
@@ -133,15 +165,28 @@ class DetalheEtapa(BaseModel):
 
     nome: str = Field(description="Nome da etapa (ex: 'Anos Iniciais').")
     matriculas: int = Field(description="Matrículas da etapa.")
-    meta: float = Field(description="Meta IDEPE da etapa.")
-    resultado: float = Field(description="Resultado IDEPE da etapa.")
-    variacao: float = Field(
-        description="Variacao = Resultado − Meta (pode ser negativa)."
+    participou: bool = Field(
+        description="A etapa atingiu 80% de participação no SAEPE."
+    )
+    meta: Optional[float] = Field(
+        None, description="Meta IDEPE da etapa. Nulo em etapa sem participação."
+    )
+    resultado: Optional[float] = Field(
+        None,
+        description="Resultado IDEPE da etapa. Nulo em etapa sem participação.",
+    )
+    variacao: Optional[float] = Field(
+        None,
+        description=(
+            "Variacao = Resultado − Meta (pode ser negativa). Nulo em etapa sem "
+            "participação, que não tem IDEPE divulgado — diferente de zero, que "
+            "é a etapa que participou e empatou com a meta."
+        ),
     )
     percentual_atingimento: float = Field(
         description=(
-            "Percentual de atingimento da meta, convertido pela "
-            "tabela IDEPE (0.0 a 2.0, ou 0% a 200%)."
+            "Percentual de atingimento da meta, convertido pela tabela IDEPE "
+            "(0.0 a 2.0). Zero em etapa sem participação."
         )
     )
 

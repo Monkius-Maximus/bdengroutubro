@@ -1,26 +1,30 @@
 """
-Servico de calculo do BDE — formula exata da celula C45 da planilha.
+Servico de calculo do BDE — ciclo 2026.
 
-Cadeia de calculo (ordem da planilha):
+A participacao de 80% no SAEPE e por etapa e funciona como portao: etapa que
+nao atingiu nao tem IDEPE divulgado, entra na conta com atingimento zero e
+continua pesando pelas suas matriculas.
 
-  B21/B29/B37  diferenca por etapa = resultado - meta
-  H47          media ponderada pelas matriculas, ROUND(..., 4)
-  H45          conversao da media em percentual (tabela)
-  B40          cota resultado = min(H45, 1)
-  B41          cota alem do resultado = H45 - B40
-  B42          cota equidade = 1 se D12="SIM", senao 0
-  B43          cota elementares = 1 se D13="SIM", senao 0
-  B44          cota participacao = 0.5 se >= 80%, senao 0
-  C45          cota do BDE (formula composta) + B44
+Cadeia de calculo:
 
-Formula C45 (EXATA da planilha):
-  =SE(E(B40=1;B41=1;B42=1;B43=1); 2,5;
-    SE(E(B40<=1;OU(B42=1;B43=1)); 1+B40;
-      SE(E((B40+B41)>1;OU(B42=1;B43=1)); 2;
-        B40
-      )
-    )
-  ) + B44
+  variacao_i       resultado - meta, so nas etapas que participaram
+  H47              media ponderada das variacoes, SO entre as aprovadas
+  H45              conversao da media em percentual (tabela _TABELA)
+  diluicao         percentual x (matriculas aprovadas / matriculas totais)
+  B40              cota resultado = min(percentual_idepe, 1)
+  B41              cota alem do resultado = percentual_idepe - B40 (informativa)
+  equidade         +100% por quesito atingido, os dois somam +200%
+  participacao     +50% se QUALQUER etapa atingiu 80%
+  total            min(B40 + equidade + elementares + participacao, 3.0)
+
+A formula C45 da planilha nao vale mais. Ela tratava os dois quesitos de
+equidade com OU — ter os dois valia o mesmo que ter um so, salvo num unico
+ramo. A regra do ciclo 2026 soma por quesito, entao o simulador diverge da
+planilha de proposito a partir daqui. Ver docs/EXTRACAO_PLANILHA.md secao 5.1.
+
+A diluicao acontece DEPOIS da conversao, nao antes: uma etapa sem meta e sem
+resultado nao tem variacao para entrar no H47. Assim, enquanto todas as etapas
+passarem no portao, o percentual_idepe e identico ao do ciclo anterior.
 """
 
 from __future__ import annotations
@@ -63,50 +67,12 @@ def _converter(diferenca: float) -> float:
 
 
 # ============================================================================
-# Formula C45 — EXATA da planilha
+# Pesos das cotas — mudam entre ciclos
 # ============================================================================
 
-def _calcular_c45(
-    percentual_idepe: float,
-    tem_equidade: bool,
-    tem_elementares: bool,
-) -> float:
-    """
-    Formula C45 da planilha, sem B44.
-
-    B40 = min(percentual_idepe, 1.0)
-    B41 = max(percentual_idepe - B40, 0.0)
-    B42 = 1 se equidade, senao 0
-    B43 = 1 se elementares, senao 0
-
-    C45 =
-      SE( E(B40=1; B41=1; B42=1; B43=1); 2.5;
-        SE( E(B40<=1; OU(B42=1; B43=1)); 1+B40;
-          SE( E((B40+B41)>1; OU(B42=1; B43=1)); 2;
-            B40
-          )
-        )
-      )
-    """
-    b40 = min(percentual_idepe, 1.0)
-    b41 = max(percentual_idepe - b40, 0.0)
-    b42 = 1.0 if tem_equidade else 0.0
-    b43 = 1.0 if tem_elementares else 0.0
-
-    # Condicao 1: todos igual a 1
-    if b40 == 1.0 and b41 == 1.0 and b42 == 1.0 and b43 == 1.0:
-        return 2.5
-
-    # Condicao 2: B40<=1 e (equidade ou elementares)
-    if b40 <= 1.0 and (b42 == 1.0 or b43 == 1.0):
-        return 1.0 + b40
-
-    # Condicao 3: (B40+B41)>1 e (equidade ou elementares)
-    if (b40 + b41) > 1.0 and (b42 == 1.0 or b43 == 1.0):
-        return 2.0
-
-    # Default
-    return b40
+COTA_POR_QUESITO_EQUIDADE: Final[float] = 1.0
+COTA_PARTICIPACAO: Final[float] = 0.5
+TETO_BDE: Final[float] = 3.0
 
 
 # ============================================================================
@@ -125,7 +91,7 @@ _NOMES: Final[dict[str, str]] = {
 # ============================================================================
 
 def calcular_bde(req: RequisicaoBDE) -> RespostaBDE:
-    """Calcula o BDE com a formula exata da planilha."""
+    """Calcula o BDE a partir das respostas acumuladas do wizard."""
 
     # 1. Coletar etapas
     entrada: list[tuple[str, EtapaIDEPE]] = []
@@ -136,42 +102,60 @@ def calcular_bde(req: RequisicaoBDE) -> RespostaBDE:
     if req.etapa_em is not None:
         entrada.append(("em", req.etapa_em))
 
-    # 2. Diferenca por etapa
+    # 2. Detalhe por etapa. Etapa sem 80% nao tem IDEPE divulgado: variacao
+    #    fica nula, que e diferente de zero (zero e quem empatou com a meta).
     detalhes: list[DetalheEtapa] = []
     for chave, etapa in entrada:
-        variacao = round(etapa.resultado - etapa.meta, 4)
-        pct = _converter(variacao)
+        if etapa.participacao_maior_80:
+            variacao = round(etapa.resultado - etapa.meta, 4)
+            pct = _converter(variacao)
+        else:
+            variacao = None
+            pct = 0.0
         detalhes.append(DetalheEtapa(
             nome=_NOMES[chave],
             matriculas=etapa.matriculas,
+            participou=etapa.participacao_maior_80,
             meta=etapa.meta,
             resultado=etapa.resultado,
             variacao=variacao,
             percentual_atingimento=pct,
         ))
 
-    # 3. Media ponderada (H47)
-    total_mat = sum(d.matriculas for d in detalhes)
-    soma = sum(d.variacao * d.matriculas for d in detalhes)
-    media = round(soma / total_mat, 4) if total_mat else 0.0
+    aprovadas = [d for d in detalhes if d.participou]
 
-    # 4. Percentual IDEPE (H45)
-    percentual_idepe = _converter(media)
+    # 3. Media ponderada (H47) — so entre as aprovadas, porque so elas tem
+    #    variacao. Com nenhuma aprovada, nao ha IDEPE: a escola concorre
+    #    apenas aos quesitos de equidade.
+    mat_aprovadas = sum(d.matriculas for d in aprovadas)
+    if aprovadas:
+        soma = sum(d.variacao * d.matriculas for d in aprovadas)
+        media = round(soma / mat_aprovadas, 4)
+        pct_aprovadas = _converter(media)
+    else:
+        media = 0.0
+        pct_aprovadas = 0.0
 
-    # 5. B40 / B41
+    # 4. Diluicao pelas reprovadas: elas entram com atingimento zero e com o
+    #    peso das suas matriculas. Sem reprovada nenhuma, a fracao e 1 e o
+    #    percentual e exatamente o do ciclo anterior.
+    mat_total = sum(d.matriculas for d in detalhes)
+    percentual_idepe = round(pct_aprovadas * (mat_aprovadas / mat_total), 4)
+
+    # 5. B40 / B41. A parcela acima de 100% continua fora da soma; fica
+    #    exposta para o gestor entender por que superar muito nao mudou nada.
     cota_resultado = min(percentual_idepe, 1.0)
     cota_alem = max(percentual_idepe - cota_resultado, 0.0)
 
-    # 6. B42 / B43 / B44
-    cota_eq = 1.0 if req.reduziu_desigualdade else 0.0
-    cota_el = 1.0 if req.terco_menor_elementares else 0.0
-    cota_part = 0.5 if req.participacao_maior_80 else 0.0
+    # 6. Equidade soma por quesito atingido, e vale para toda escola, tenha ou
+    #    nao passado no portao da participacao.
+    cota_eq = COTA_POR_QUESITO_EQUIDADE if req.reduziu_desigualdade else 0.0
+    cota_el = COTA_POR_QUESITO_EQUIDADE if req.terco_menor_elementares else 0.0
+    cota_part = COTA_PARTICIPACAO if aprovadas else 0.0
 
-    # 7. C45 (formula exata)
-    cota_bde = _calcular_c45(percentual_idepe, req.reduziu_desigualdade, req.terco_menor_elementares)
-
-    # 8. Total = C45 + B44
-    percentual_final = round(cota_bde + cota_part, 4)
+    # 7. Total, no teto de 300%
+    cota_bde = cota_resultado + cota_eq + cota_el
+    percentual_final = round(min(cota_bde + cota_part, TETO_BDE), 4)
     apto = percentual_final > 0.0
 
     return RespostaBDE(
