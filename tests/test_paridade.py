@@ -144,7 +144,7 @@ def gerar_casos() -> list[dict]:
     Resultados escolhidos para pousar em cima dos limites da tabela de conversao
     e a um passo deles, onde 0,01 na media ponderada vale 25 pontos percentuais.
 
-    As familias cobrem os quatro caminhos da regra do ciclo 2026: todas as
+    As familias cobrem os quatro caminhos da regra do BDE 2027: todas as
     etapas aprovadas, todas reprovadas, e as duas misturas — aprovada grande com
     reprovada pequena e o inverso, que e onde a diluicao mais pesa.
     """

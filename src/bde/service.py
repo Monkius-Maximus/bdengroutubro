@@ -1,5 +1,5 @@
 """
-Servico de calculo do BDE — ciclo 2026.
+Servico de calculo do BDE — BDE 2027.
 
 A participacao de 80% no SAEPE e por etapa e funciona como portao: etapa que
 nao atingiu nao tem IDEPE divulgado, entra na conta com atingimento zero e
@@ -19,7 +19,7 @@ Cadeia de calculo:
 
 A formula C45 da planilha nao vale mais. Ela tratava os dois quesitos de
 equidade com OU — ter os dois valia o mesmo que ter um so, salvo num unico
-ramo. A regra do ciclo 2026 soma por quesito, entao o simulador diverge da
+ramo. A regra do BDE 2027 soma por quesito, entao o simulador diverge da
 planilha de proposito a partir daqui. Ver docs/EXTRACAO_PLANILHA.md secao 5.1.
 
 A diluicao acontece DEPOIS da conversao, nao antes: uma etapa sem meta e sem

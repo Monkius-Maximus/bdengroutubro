@@ -1,5 +1,5 @@
 """
-Tabela de conferencia da regra do ciclo 2026.
+Tabela de conferencia da regra do BDE 2027.
 
 Cada cenario aqui foi descrito pelo gestor da regra, nao derivado do codigo.
 Se um deles quebrar, ou a regra mudou e este arquivo precisa mudar junto, ou o

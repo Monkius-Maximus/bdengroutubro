@@ -92,9 +92,9 @@ em nenhum dígito digitado pelo gestor. Regressão coberta por
 
 ## B. Interpretação da regra
 
-### B1. Assumir que os bônus NÃO são cumulativos — [Invertido no ciclo 2026]
-Até o ciclo 2025 valia o contrário: a `C45` usava `OR` e ter os dois quesitos de
-equidade valia o mesmo que ter um só. **No ciclo 2026 os quesitos somam**: cada
+### B1. Assumir que os bônus NÃO são cumulativos — [Invertido no BDE 2027]
+Até o BDE 2026 valia o contrário: a `C45` usava `OR` e ter os dois quesitos de
+equidade valia o mesmo que ter um só. **No BDE 2027 os quesitos somam**: cada
 um vale +100%, os dois valem +200%.
 
 *O caminho ruim agora é o inverso* — repetir para o gestor a explicação antiga,
@@ -116,7 +116,7 @@ provável de contestação: a escola que mais superou a meta não vê diferença
 
 ### B2b. Prometer valores intermediários que a regra não produz — [Mitigado]
 A regra produz um conjunto pequeno de valores distintos, e um texto do tipo
-"faltam 20% para o teto" inventa uma granularidade que não existe. No ciclo 2026
+"faltam 20% para o teto" inventa uma granularidade que não existe. No BDE 2027
 há um platô novo: a soma é travada em 300%, então combinações diferentes exibem
 o mesmo 300% — IDEPE de 100% com os dois quesitos e participação dá 350% antes
 do teto, e o gestor não vê diferença se melhorar.
@@ -130,14 +130,14 @@ está na tela.
 ### B2c. Orientar a escola a "superar mais a meta" — [Mitigado]
 Conselho intuitivo e quase sempre inútil: acima de 100% de IDEPE a cota de
 resultado não muda mais. Uma escola em 125% ganha muito mais perseguindo um
-quesito de equidade (+100 pontos) do que subindo o IDEPE. No ciclo 2026 isso
+quesito de equidade (+100 pontos) do que subindo o IDEPE. No BDE 2027 isso
 ficou mais forte, porque os dois quesitos somam +200.
 
 *Mitigação:* o popup da "Cota Resultado" diz que o excedente não entra na soma.
 
-### B3. Tratar a participação como só um bônus — [Invertido no ciclo 2026]
-Até o ciclo 2025 a participação era apenas uma cota adicional de 50%, e o
-caminho ruim era chamá-la de eliminatória. **No ciclo 2026 ela é as duas
+### B3. Tratar a participação como só um bônus — [Invertido no BDE 2027]
+Até o BDE 2026 a participação era apenas uma cota adicional de 50%, e o
+caminho ruim era chamá-la de eliminatória. **No BDE 2027 ela é as duas
 coisas**, e por etapa:
 
 - **Portão:** etapa sem 80% não tem IDEPE divulgado e entra com 0% de
@@ -280,8 +280,8 @@ de um lado agora reprova o teste em vez de aparecer na tela do gestor.
 
 | # | Item | Estado |
 |---|---|---|
-| B1 | Equidade cumulativa (+100% por quesito) | Ciclo 2026: soma; diverge da planilha de propósito |
-| B3 | Participação por etapa, como portão do IDEPE | Ciclo 2026: implementado |
+| B1 | Equidade cumulativa (+100% por quesito) | BDE 2027: soma; diverge da planilha de propósito |
+| B3 | Participação por etapa, como portão do IDEPE | BDE 2027: implementado |
 | B2 | Cota além do resultado descartada | Decidido: reproduzir, com aviso ao gestor |
 | A8 | Buraco da faixa (−0,3; −0,2) em `H45` | Decidido: ler a grade (25%), como o sistema em uso |
 | — | Levar o buraco da faixa ao Núcleo da SEPLAG | **Aberto — fora do código** |

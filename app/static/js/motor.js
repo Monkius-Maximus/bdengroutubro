@@ -22,7 +22,7 @@
      total         min(B40 + equidade + elementares + participacao; 3.0)
 
    A formula C45 da planilha nao vale mais: ela tratava os dois quesitos de
-   equidade com OU. A regra do ciclo 2026 soma por quesito, entao o simulador
+   equidade com OU. A regra do BDE 2027 soma por quesito, entao o simulador
    diverge da planilha de proposito. Ver docs/EXTRACAO_PLANILHA.md secao 5.1.
 
    A diluicao acontece DEPOIS da conversao, nao antes: uma etapa sem meta e sem

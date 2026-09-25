@@ -93,9 +93,14 @@ de negócio.
 Três achados. O primeiro é decisivo e precisa de decisão de negócio antes de
 escrevermos o `BDECalculatorService`.
 
-### 5.1 `C45` não trata os bônus como cumulativos — SUPERADO no ciclo 2026
+### 5.1 `C45` não trata os bônus como cumulativos — SUPERADO no BDE 2027
 
-**Registro histórico. Esta seção descreve a regra até o ciclo 2025.**
+> **Nomenclatura.** "BDE 2027" é o bônus pago em 2027, calculado com os
+> resultados de 2026: metas 2026, matrículas 2026, SAEPE 2026, e os quesitos de
+> equidade comparando 2026 com 2025. "BDE 2026" é a regra anterior, a que a
+> planilha `Simulador_Idepe_e_Atingimento_de_metas_2026.xlsx` implementa.
+
+**Registro histórico. Esta seção descreve a regra até o BDE 2026.**
 
 A fórmula `C45` usava `OR(B42=1; B43=1)`: ter as duas condições de equidade
 valia o mesmo que ter uma só, exceto no caso único em que o IDEPE era
@@ -106,7 +111,7 @@ cumulativos".
 A decisão de então foi **reproduzir a planilha**, por ser mecanismo já validado
 e em uso na SEPLAG.
 
-**No ciclo 2026 a regra passou a somar**, por determinação do gestor da regra:
+**No BDE 2027 a regra passou a somar**, por determinação do gestor da regra:
 cada quesito de equidade atingido vale +100%, os dois valem +200%, e isso vale
 para toda escola — inclusive a que não atingiu os 80% de participação e ficou
 sem IDEPE. A `C45` e seus quatro ramos saíram do código.
@@ -114,7 +119,7 @@ sem IDEPE. A `C45` e seus quatro ramos saíram do código.
 **A consequência precisa estar clara para quem atende o gestor:** a planilha em
 circulação e o simulador passam a divergir de propósito. Uma escola com IDEPE
 de 100% e os dois quesitos de equidade vê 250% na planilha e 300% aqui. Quem
-manda é a regra do ciclo 2026; a planilha é que está desatualizada.
+manda é a regra do BDE 2027; a planilha é que está desatualizada.
 
 O total passou a ser:
 
@@ -129,10 +134,10 @@ Registro do que ficou para trás: o 3º ramo da `C45` (`(B40+B41)>1 → 2`) era
 `B40<=1` era sempre verdadeiro e o 2º ramo capturava antes; redundante porque,
 se fosse alcançado, devolveria `2`, o mesmo que `1+B40` com `B40=1`.
 
-### 5.1-b A participação virou portão, e é por etapa — NOVO no ciclo 2026
+### 5.1-b A participação virou portão, e é por etapa — NOVO no BDE 2027
 
-Até o ciclo 2025 a participação era uma pergunta única da escola e apenas somava
-`B44` (+50%). No ciclo 2026 ela é perguntada **por etapa** e decide se a etapa
+Até o BDE 2026 a participação era uma pergunta única da escola e apenas somava
+`B44` (+50%). No BDE 2027 ela é perguntada **por etapa** e decide se a etapa
 tem IDEPE:
 
 - Etapa sem 80% não tem IDEPE divulgado. Não se pergunta meta nem resultado
