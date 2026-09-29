@@ -92,66 +92,53 @@ em nenhum dígito digitado pelo gestor. Regressão coberta por
 
 ## B. Interpretação da regra
 
-### B1. Assumir que os bônus NÃO são cumulativos — [Invertido no BDE 2027]
-Até o BDE 2026 valia o contrário: a `C45` usava `OR` e ter os dois quesitos de
-equidade valia o mesmo que ter um só. **No BDE 2027 os quesitos somam**: cada
-um vale +100%, os dois valem +200%.
+### B1. Assumir que os bônus NÃO são cumulativos — [Mitigado]
+A `C45` literal da planilha usa `OR`: ter os dois quesitos de equidade vale o
+mesmo que ter um só. A regra do simulador (`src/bde/schemas.py`) **soma** os
+quesitos, dentro do teto de 250% da cota do BDE.
 
-*O caminho ruim agora é o inverso* — repetir para o gestor a explicação antiga,
-ou comparar o resultado com a planilha em circulação, que ainda usa `OR`. Uma
-escola com IDEPE de 100% e os dois quesitos vê 250% na planilha e 300% aqui.
+*O caminho ruim* é repetir para o gestor a explicação da planilha, ou comparar
+o resultado com ela.
 
-*Mitigação:* `EXTRACAO_PLANILHA.md` §5.1 registra a mudança e a divergência
-proposital com a planilha. `tests/test_cenarios.py` trava o cenário D, que é
-exatamente esse caso.
+*Mitigação:* `EXTRACAO_PLANILHA.md` §5.1 registra a regra vigente e
+`tests/test_cenarios.py` trava os cenários C e D.
 
 ### B2. Esperar que desempenho acima da meta sempre aumente a cota — [Mitigado]
-Em `C45`, `B41` (cota além do resultado) é descartada no caminho normal. Sem
-bônus, 200% de IDEPE rende exatamente o mesmo que 100%. É o caminho mais
-provável de contestação: a escola que mais superou a meta não vê diferença.
+O percentual IDEPE inteiro (até 200%) entra na cota do BDE, mas ela é travada
+em 250%. Com um quesito de equidade, IDEPE de 150% já bate o teto; com os dois,
+50% basta. Acima disso a escola que mais superou a meta não vê diferença.
 
-*Mitigação:* `cota_alem_resultado` continua exposta na resposta e o popup da
-"Cota Resultado" diz, em palavras, que o excedente não entra na soma. O ciclo
-2026 não mudou isso: a cota de resultado segue limitada a 100%.
+*Mitigação:* o popup da "Cota BDE Calculada" diz, em palavras, que a cota é
+limitada a 250%.
 
 ### B2b. Prometer valores intermediários que a regra não produz — [Mitigado]
 A regra produz um conjunto pequeno de valores distintos, e um texto do tipo
 "faltam 20% para o teto" inventa uma granularidade que não existe. No BDE 2027
-há um platô novo: a soma é travada em 300%, então combinações diferentes exibem
-o mesmo 300% — IDEPE de 100% com os dois quesitos e participação dá 350% antes
-do teto, e o gestor não vê diferença se melhorar.
+há platôs: a cota do BDE é travada em 250% e o total em 300%, então
+combinações diferentes exibem o mesmo valor — IDEPE de 100% com os dois
+quesitos daria 300% de cota antes do teto de 250%, e o gestor não vê diferença
+se melhorar.
 
-*Mitigação:* os `alertas` dizem a condição exata e completa do teto (IDEPE de
-200% + as duas metas de equidade + participação), em vez de uma distância. A
+*Mitigação:* a tabela-verdade de `EXTRACAO_PLANILHA.md` §6 lista os valores
+possíveis, todos múltiplos de 25%. A
 barra de progresso mede **passos do formulário** ("Passo 3 de 8"), nunca
 proximidade do teto — são coisas diferentes e a rotulagem explicita qual delas
 está na tela.
 
 ### B2c. Orientar a escola a "superar mais a meta" — [Mitigado]
-Conselho intuitivo e quase sempre inútil: acima de 100% de IDEPE a cota de
-resultado não muda mais. Uma escola em 125% ganha muito mais perseguindo um
-quesito de equidade (+100 pontos) do que subindo o IDEPE. No BDE 2027 isso
-ficou mais forte, porque os dois quesitos somam +200.
+Conselho que só vale enquanto a cota do BDE não bate 250%. Uma escola em 150%
+de IDEPE com um quesito de equidade já está no teto e não ganha nada subindo o
+IDEPE.
 
-*Mitigação:* o popup da "Cota Resultado" diz que o excedente não entra na soma.
+*Mitigação:* o popup da "Cota BDE Calculada" diz que a cota é limitada a 250%.
 
-### B3. Tratar a participação como só um bônus — [Invertido no BDE 2027]
-Até o BDE 2026 a participação era apenas uma cota adicional de 50%, e o
-caminho ruim era chamá-la de eliminatória. **No BDE 2027 ela é as duas
-coisas**, e por etapa:
+### B3. Tratar a participação como eliminatória — [Mitigado]
+A participação ≥ 80% é uma pergunta única da escola e apenas **soma** +50%,
+depois do teto de 250% da cota do BDE. Não é portão do IDEPE e não é por
+etapa: escola sem participação mantém o IDEPE e os quesitos de equidade.
 
-- **Portão:** etapa sem 80% não tem IDEPE divulgado e entra com 0% de
-  atingimento, pesando pelas matrículas.
-- **Bônus:** basta uma etapa atingir os 80% para a escola somar +50%.
-
-*O caminho ruim agora é dizer que a escola "perde tudo" sem participação.* Ela
-não perde: os quesitos de equidade continuam valendo, e uma escola sem nenhuma
-participação ainda chega a 200% se atingir os dois. Só chega a 0% quem não
-atinge nem participação nem equidade.
-
-*Mitigação:* `participacao_maior_80` é campo de `EtapaIDEPE`, não da requisição,
-e um `model_validator` recusa meta e resultado em etapa que não participou —
-IDEPE não divulgado não entra por engano.
+*Mitigação:* `participacao_maior_80` é campo de `RequisicaoBDE`, e toda etapa
+exige meta e resultado.
 
 ### B4. Fixar 50% como o valor eterno da cota de participação — [Mitigado]
 No ciclo BDE 2025 (resultados de 2024) essa cota foi de **25%**. O percentual
@@ -280,9 +267,9 @@ de um lado agora reprova o teste em vez de aparecer na tela do gestor.
 
 | # | Item | Estado |
 |---|---|---|
-| B1 | Equidade cumulativa (+100% por quesito) | BDE 2027: soma; diverge da planilha de propósito |
-| B3 | Participação por etapa, como portão do IDEPE | BDE 2027: implementado |
-| B2 | Cota além do resultado descartada | Decidido: reproduzir, com aviso ao gestor |
+| B1 | Equidade cumulativa (+100% por quesito) | Soma, com teto de 250% na cota do BDE |
+| B3 | Participação como bônus da escola, não portão | Implementado conforme `schemas.py` |
+| B2 | Teto de 250% na cota do BDE | Mitigado: aviso no popup |
 | A8 | Buraco da faixa (−0,3; −0,2) em `H45` | Decidido: ler a grade (25%), como o sistema em uso |
 | — | Levar o buraco da faixa ao Núcleo da SEPLAG | **Aberto — fora do código** |
 | B4 | Cota de participação fixada em 50% | Mitigado: constante nomeada por ciclo |

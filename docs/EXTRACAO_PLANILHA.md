@@ -93,67 +93,34 @@ de negócio.
 Três achados. O primeiro é decisivo e precisa de decisão de negócio antes de
 escrevermos o `BDECalculatorService`.
 
-### 5.1 `C45` não trata os bônus como cumulativos — SUPERADO no BDE 2027
+### 5.1 Regra vigente — `src/bde/schemas.py`
 
-> **Nomenclatura.** "BDE 2027" é o bônus pago em 2027, calculado com os
-> resultados de 2026: metas 2026, matrículas 2026, SAEPE 2026, e os quesitos de
-> equidade comparando 2026 com 2025. "BDE 2026" é a regra anterior, a que a
-> planilha `Simulador_Idepe_e_Atingimento_de_metas_2026.xlsx` implementa.
-
-**Registro histórico. Esta seção descreve a regra até o BDE 2026.**
-
-A fórmula `C45` usava `OR(B42=1; B43=1)`: ter as duas condições de equidade
-valia o mesmo que ter uma só, exceto no caso único em que o IDEPE era
-exatamente 200%. `B41` era descartada no caminho normal. Divergiam 20 das 28
-combinações em relação à regra declarada, que dizia "independentes e
-cumulativos".
-
-A decisão de então foi **reproduzir a planilha**, por ser mecanismo já validado
-e em uso na SEPLAG.
-
-**No BDE 2027 a regra passou a somar**, por determinação do gestor da regra:
-cada quesito de equidade atingido vale +100%, os dois valem +200%, e isso vale
-para toda escola — inclusive a que não atingiu os 80% de participação e ficou
-sem IDEPE. A `C45` e seus quatro ramos saíram do código.
-
-**A consequência precisa estar clara para quem atende o gestor:** a planilha em
-circulação e o simulador passam a divergir de propósito. Uma escola com IDEPE
-de 100% e os dois quesitos de equidade vê 250% na planilha e 300% aqui. Quem
-manda é a regra do BDE 2027; a planilha é que está desatualizada.
-
-O total passou a ser:
+A regra do simulador é a descrita em `src/bde/schemas.py`. Ela substitui duas
+leituras anteriores deste repositório: a `C45` literal da planilha (equidade
+com `OR`) e a regra "participação por etapa como portão", que diluía o
+percentual IDEPE pela fração de matrículas das etapas aprovadas.
 
 ```python
-cota_resultado = min(percentual_idepe, 1.0)
-cota_bde = cota_resultado + (1.0 se equidade) + (1.0 se elementares)
-percentual_bde = min(cota_bde + (0.5 se alguma etapa com 80%), 3.0)
+percentual_idepe = H45(H47)                        # degraus de 25%, 0% a 200%
+cota_resultado   = min(percentual_idepe, 1.0)      # B40, informativa
+cota_alem        = percentual_idepe - cota_resultado  # B41, informativa
+cota_bde         = min(percentual_idepe + equidade + elementares, 2.5)
+percentual_bde   = min(cota_bde + participacao, 3.0)
 ```
 
-Registro do que ficou para trás: o 3º ramo da `C45` (`(B40+B41)>1 → 2`) era
-**inalcançável e redundante** — inalcançável porque `B40` é `min(H45; 1)`, logo
-`B40<=1` era sempre verdadeiro e o 2º ramo capturava antes; redundante porque,
-se fosse alcançado, devolveria `2`, o mesmo que `1+B40` com `B40=1`.
+- Toda etapa pactuada informa matrículas, meta e resultado; a média ponderada
+  (`H47`) roda sobre todas elas.
+- Equidade e elementares valem +100% cada e **somam**, dentro do teto de 250%
+  da cota do BDE.
+- A participação ≥ 80% é **uma pergunta da escola**, não por etapa, e soma +50%
+  depois do teto de 250%.
 
-### 5.1-b A participação virou portão, e é por etapa — NOVO no BDE 2027
-
-Até o BDE 2026 a participação era uma pergunta única da escola e apenas somava
-`B44` (+50%). No BDE 2027 ela é perguntada **por etapa** e decide se a etapa
-tem IDEPE:
-
-- Etapa sem 80% não tem IDEPE divulgado. Não se pergunta meta nem resultado
-  dela, e ela entra na conta com **0% de atingimento**, pesando pelas suas
-  matrículas.
-- A média ponderada (`H47`) roda **só entre as etapas aprovadas**, porque só
-  elas têm variação. O percentual convertido é então reduzido na proporção das
-  matrículas que ficaram de fora.
-- O +50% continua existindo e basta **uma** etapa atingir os 80% para a escola
-  somá-lo.
-
-A ordem importa: a diluição acontece **depois** da conversão, não antes. Uma
-etapa sem meta e sem resultado não tem variação para entrar no `H47`. Com essa
-ordem, escola com todas as etapas aprovadas devolve exatamente o mesmo
-`percentual_idepe` do ciclo anterior — a regressão está travada em
-`tests/test_cenarios.py`, cenário F.
+**Não existe valor quebrado.** A tabela de conversão só devolve degraus de 25%,
+os quesitos valem 100% e a participação 50%, então o percentual final é sempre
+múltiplo de 25%. A regra do portão produzia valores como 133% (AI 200
+matrículas com +0,10, AF 100 matrículas sem participação: 125% × 200/300 +
+50%); `tests/test_cenarios.py` varre milhares de combinações e reprova qualquer
+resultado fora dos degraus.
 
 ### 5.2 Buraco na faixa (−0,3; −0,2) em `H45` — DECIDIDO: ler a grade
 
@@ -192,29 +159,25 @@ entre ciclos — daí `COTA_PARTICIPACAO` ser constante nomeada em `service.py`.
 
 ## 6. Tabela-verdade — referência de conferência manual
 
-Saída de `C45` para as 9 faixas de IDEPE × equidade × elementares. A coluna
-final já inclui a cota de participação; sem participação, subtraia 50 pontos.
-É contra esta tabela que o motor Python foi conferido (36/36).
+Saída do simulador para as 9 faixas de IDEPE × quesitos de equidade. Sem
+participação, leia a coluna "Dois bônus" e as anteriores; com participação,
+some 50 pontos, respeitando o teto de 300%.
 
-| IDEPE | Sem bônus | Um bônus | Dois bônus | Com participação (dois bônus) |
+| IDEPE | Sem bônus | Um bônus | Dois bônus | Dois bônus + participação |
 |---|---|---|---|---|
-| 0% | 0% | 100% | 100% | 150% |
-| 25% | 25% | 125% | 125% | 175% |
-| 50% | 50% | 150% | 150% | 200% |
-| 75% | 75% | 175% | 175% | 225% |
-| 100% | 100% | 200% | 200% | 250% |
-| 125% | 100% | 200% | 200% | 250% |
-| 150% | 100% | 200% | 200% | 250% |
-| 175% | 100% | 200% | 200% | 250% |
-| 200% | 100% | 200% | **250%** | **300%** |
+| 0% | 0% | 100% | 200% | 250% |
+| 25% | 25% | 125% | 225% | 275% |
+| 50% | 50% | 150% | 250% | 300% |
+| 75% | 75% | 175% | 250% | 300% |
+| 100% | 100% | 200% | 250% | 300% |
+| 125% | 125% | 225% | 250% | 300% |
+| 150% | 150% | 250% | 250% | 300% |
+| 175% | 175% | 250% | 250% | 300% |
+| 200% | 200% | 250% | 250% | 300% |
 
-Três leituras que o produto precisa comunicar:
+Leituras que o produto precisa comunicar:
 
-1. **300% só existe em uma combinação**: IDEPE de 200% + as duas metas de
-   equidade + participação. Não há valores entre 250% e 300%.
-2. **IDEPE acima de 100% é irrelevante** fora dessa combinação: 125%, 150%,
-   175% e 200% rendem a mesma cota que 100%.
-3. **Ter os dois bônus vale o mesmo que ter um só**, exceto naquela combinação.
-
-Cotas distintas possíveis em `C45`: 0%, 25%, 50%, 75%, 100%, 125%, 150%, 175%,
-200% e 250%.
+1. **IDEPE acima de 100% conta**, até a cota do BDE bater 250%.
+2. **O teto de 250% da cota do BDE** é atingido cedo com os quesitos de
+   equidade: com os dois, qualquer IDEPE de 50% ou mais já está no teto.
+3. **Todo resultado é múltiplo de 25%.**

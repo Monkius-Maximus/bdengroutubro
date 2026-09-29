@@ -60,17 +60,6 @@
                         <label>Matrículas 2026</label>
                         <input type="number" id="inp-ai-mat" placeholder="Ex: 120" min="1">
                     </div>
-                </div>
-
-                <div class="pergunta-bloco">
-                    <p class="pergunta-item">Esta etapa atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE?</p>
-                    <div class="botoes-simnao">
-                        <button type="button" class="btn-simnao" data-campo="ai" data-valor="true" onclick="toggleParticipacaoEtapa(this)">Sim</button>
-                        <button type="button" class="btn-simnao" data-campo="ai" data-valor="false" onclick="toggleParticipacaoEtapa(this)">Não</button>
-                    </div>
-                </div>
-
-                <div class="input-grupo" id="idepe-ai" style="display:none">
                     <div class="input-campo">
                         <label>Meta IDEPE</label>
                         <input type="number" id="inp-ai-meta" placeholder="Ex: 4.50" step="0.01" min="0">
@@ -79,10 +68,6 @@
                         <label>Resultado IDEPE</label>
                         <input type="number" id="inp-ai-res" placeholder="Ex: 4.70" step="0.01" min="0">
                     </div>
-                </div>
-
-                <div class="pergunta-bloco" id="aviso-ai" style="display:none">
-                    <p class="pergunta-item" style="margin-bottom:0">Sem 80% de participação o IDEPE desta etapa não é divulgado. Ela entra no cálculo com <strong>0% de atingimento</strong>, pesando pelas matrículas informadas.</p>
                 </div>
             </div>
 
@@ -94,17 +79,6 @@
                         <label>Matrículas 2026</label>
                         <input type="number" id="inp-af-mat" placeholder="Ex: 200" min="1">
                     </div>
-                </div>
-
-                <div class="pergunta-bloco">
-                    <p class="pergunta-item">Esta etapa atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE?</p>
-                    <div class="botoes-simnao">
-                        <button type="button" class="btn-simnao" data-campo="af" data-valor="true" onclick="toggleParticipacaoEtapa(this)">Sim</button>
-                        <button type="button" class="btn-simnao" data-campo="af" data-valor="false" onclick="toggleParticipacaoEtapa(this)">Não</button>
-                    </div>
-                </div>
-
-                <div class="input-grupo" id="idepe-af" style="display:none">
                     <div class="input-campo">
                         <label>Meta IDEPE</label>
                         <input type="number" id="inp-af-meta" placeholder="Ex: 4.50" step="0.01" min="0">
@@ -113,10 +87,6 @@
                         <label>Resultado IDEPE</label>
                         <input type="number" id="inp-af-res" placeholder="Ex: 4.45" step="0.01" min="0">
                     </div>
-                </div>
-
-                <div class="pergunta-bloco" id="aviso-af" style="display:none">
-                    <p class="pergunta-item" style="margin-bottom:0">Sem 80% de participação o IDEPE desta etapa não é divulgado. Ela entra no cálculo com <strong>0% de atingimento</strong>, pesando pelas matrículas informadas.</p>
                 </div>
             </div>
 
@@ -128,17 +98,6 @@
                         <label>Matrículas 2026</label>
                         <input type="number" id="inp-em-mat" placeholder="Ex: 300" min="1">
                     </div>
-                </div>
-
-                <div class="pergunta-bloco">
-                    <p class="pergunta-item">Esta etapa atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE?</p>
-                    <div class="botoes-simnao">
-                        <button type="button" class="btn-simnao" data-campo="em" data-valor="true" onclick="toggleParticipacaoEtapa(this)">Sim</button>
-                        <button type="button" class="btn-simnao" data-campo="em" data-valor="false" onclick="toggleParticipacaoEtapa(this)">Não</button>
-                    </div>
-                </div>
-
-                <div class="input-grupo" id="idepe-em" style="display:none">
                     <div class="input-campo">
                         <label>Meta IDEPE</label>
                         <input type="number" id="inp-em-meta" placeholder="Ex: 5.00" step="0.01" min="0">
@@ -147,10 +106,6 @@
                         <label>Resultado IDEPE</label>
                         <input type="number" id="inp-em-res" placeholder="Ex: 5.10" step="0.01" min="0">
                     </div>
-                </div>
-
-                <div class="pergunta-bloco" id="aviso-em" style="display:none">
-                    <p class="pergunta-item" style="margin-bottom:0">Sem 80% de participação o IDEPE desta etapa não é divulgado. Ela entra no cálculo com <strong>0% de atingimento</strong>, pesando pelas matrículas informadas.</p>
                 </div>
             </div>
 
@@ -175,14 +130,26 @@
                 </div>
             </div>
 
-
-            <!-- STEP 5: Resumo -->
+            <!-- STEP 5: Participacao -->
             <div class="step" data-step="5" style="display:none">
+                <h2 class="pergunta-titulo">Responda sobre a <strong>Participação no SAEPE</strong></h2>
+
+                <div class="pergunta-bloco">
+                    <p class="pergunta-item">A escola atingiu participação igual ou superior a 80% em <strong>todos</strong> os componentes e etapas avaliados no SAEPE 2026?</p>
+                    <div class="botoes-simnao">
+                        <button type="button" class="btn-simnao" data-campo="participacao_maior_80" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
+                        <button type="button" class="btn-simnao" data-campo="participacao_maior_80" data-valor="false" onclick="toggleSimNaoPergunta(this)">Não</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STEP 6: Resumo -->
+            <div class="step" data-step="6" style="display:none">
                 <div class="resumo-container" id="resumo-area"></div>
             </div>
 
-            <!-- STEP 6: Resultado -->
-            <div class="step" data-step="6" style="display:none">
+            <!-- STEP 7: Resultado -->
+            <div class="step" data-step="7" style="display:none">
                 <div class="resultado-container" id="resultado-area"></div>
             </div>
 

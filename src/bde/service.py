@@ -1,30 +1,23 @@
 """
-Servico de calculo do BDE — BDE 2027.
+Servico de calculo do BDE.
 
-A participacao de 80% no SAEPE e por etapa e funciona como portao: etapa que
-nao atingiu nao tem IDEPE divulgado, entra na conta com atingimento zero e
-continua pesando pelas suas matriculas.
+A regra vive em src/bde/schemas.py — este modulo so a executa.
 
 Cadeia de calculo:
 
-  variacao_i       resultado - meta, so nas etapas que participaram
-  H47              media ponderada das variacoes, SO entre as aprovadas
-  H45              conversao da media em percentual (tabela _TABELA)
-  diluicao         percentual x (matriculas aprovadas / matriculas totais)
+  variacao_i       resultado - meta, por etapa (B21/B29/B37)
+  H47              media ponderada das variacoes pelas matriculas, ROUND 4
+  H45              conversao da media em percentual IDEPE (tabela _TABELA)
   B40              cota resultado = min(percentual_idepe, 1)
-  B41              cota alem do resultado = percentual_idepe - B40 (informativa)
-  equidade         +100% por quesito atingido, os dois somam +200%
-  participacao     +50% se QUALQUER etapa atingiu 80%
-  total            min(B40 + equidade + elementares + participacao, 3.0)
+  B41              cota alem do resultado = percentual_idepe - B40
+  B42 / B43        +100% por quesito de equidade atingido
+  C45              cota do BDE = min(percentual_idepe + B42 + B43, 2.5)
+  B44              +50% se a escola atingiu 80% de participacao
+  total            min(C45 + B44, 3.0)
 
-A formula C45 da planilha nao vale mais. Ela tratava os dois quesitos de
-equidade com OU — ter os dois valia o mesmo que ter um so, salvo num unico
-ramo. A regra do BDE 2027 soma por quesito, entao o simulador diverge da
-planilha de proposito a partir daqui. Ver docs/EXTRACAO_PLANILHA.md secao 5.1.
-
-A diluicao acontece DEPOIS da conversao, nao antes: uma etapa sem meta e sem
-resultado nao tem variacao para entrar no H47. Assim, enquanto todas as etapas
-passarem no portao, o percentual_idepe e identico ao do ciclo anterior.
+Toda parcela e multipla de 25%: a tabela de conversao so devolve degraus de
+0,25, os quesitos valem 1,0 e a participacao 0,5. O percentual final, portanto,
+nunca e um valor quebrado.
 """
 
 from __future__ import annotations
@@ -67,11 +60,12 @@ def _converter(diferenca: float) -> float:
 
 
 # ============================================================================
-# Pesos das cotas — mudam entre ciclos
+# Pesos das cotas
 # ============================================================================
 
 COTA_POR_QUESITO_EQUIDADE: Final[float] = 1.0
 COTA_PARTICIPACAO: Final[float] = 0.5
+TETO_COTA_BDE: Final[float] = 2.5
 TETO_BDE: Final[float] = 3.0
 
 
@@ -102,76 +96,53 @@ def calcular_bde(req: RequisicaoBDE) -> RespostaBDE:
     if req.etapa_em is not None:
         entrada.append(("em", req.etapa_em))
 
-    # 2. Detalhe por etapa. Etapa sem 80% nao tem IDEPE divulgado: variacao
-    #    fica nula, que e diferente de zero (zero e quem empatou com a meta).
+    # 2. Variacao por etapa (B21/B29/B37)
     detalhes: list[DetalheEtapa] = []
     for chave, etapa in entrada:
-        if etapa.participacao_maior_80:
-            variacao = round(etapa.resultado - etapa.meta, 4)
-            pct = _converter(variacao)
-        else:
-            variacao = None
-            pct = 0.0
+        variacao = round(etapa.resultado - etapa.meta, 4)
         detalhes.append(DetalheEtapa(
             nome=_NOMES[chave],
             matriculas=etapa.matriculas,
-            participou=etapa.participacao_maior_80,
             meta=etapa.meta,
             resultado=etapa.resultado,
             variacao=variacao,
-            percentual_atingimento=pct,
+            percentual_atingimento=_converter(variacao),
         ))
 
-    aprovadas = [d for d in detalhes if d.participou]
+    # 3. Media ponderada (H47)
+    total_mat = sum(d.matriculas for d in detalhes)
+    soma = sum(d.variacao * d.matriculas for d in detalhes)
+    media = round(soma / total_mat, 4)
 
-    # 3. Media ponderada (H47) — so entre as aprovadas, porque so elas tem
-    #    variacao. Com nenhuma aprovada, nao ha IDEPE: a escola concorre
-    #    apenas aos quesitos de equidade.
-    mat_aprovadas = sum(d.matriculas for d in aprovadas)
-    if aprovadas:
-        soma = sum(d.variacao * d.matriculas for d in aprovadas)
-        media = round(soma / mat_aprovadas, 4)
-        pct_aprovadas = _converter(media)
-    else:
-        media = 0.0
-        pct_aprovadas = 0.0
+    # 4. Percentual IDEPE (H45)
+    percentual_idepe = _converter(media)
 
-    # 4. Diluicao pelas reprovadas: elas entram com atingimento zero e com o
-    #    peso das suas matriculas. Sem reprovada nenhuma, a fracao e 1 e o
-    #    percentual e exatamente o do ciclo anterior.
-    mat_total = sum(d.matriculas for d in detalhes)
-    percentual_idepe = round(pct_aprovadas * (mat_aprovadas / mat_total), 4)
-
-    # 5. B40 / B41. A parcela acima de 100% continua fora da soma; fica
-    #    exposta para o gestor entender por que superar muito nao mudou nada.
+    # 5. B40 / B41
     cota_resultado = min(percentual_idepe, 1.0)
-    cota_alem = max(percentual_idepe - cota_resultado, 0.0)
+    cota_alem = percentual_idepe - cota_resultado
 
-    # 6. Equidade soma por quesito atingido, e vale para toda escola, tenha ou
-    #    nao passado no portao da participacao.
-    cota_eq = COTA_POR_QUESITO_EQUIDADE if req.reduziu_desigualdade else 0.0
-    cota_el = COTA_POR_QUESITO_EQUIDADE if req.terco_menor_elementares else 0.0
-    cota_part = COTA_PARTICIPACAO if aprovadas else 0.0
+    # 6. B42 / B43 / B44
+    bonus_eq = COTA_POR_QUESITO_EQUIDADE if req.reduziu_desigualdade else 0.0
+    bonus_el = COTA_POR_QUESITO_EQUIDADE if req.terco_menor_elementares else 0.0
+    bonus_part = COTA_PARTICIPACAO if req.participacao_maior_80 else 0.0
 
-    # 7. Total, no teto de 300%
-    cota_bde = cota_resultado + cota_eq + cota_el
-    percentual_final = round(min(cota_bde + cota_part, TETO_BDE), 4)
-    apto = percentual_final > 0.0
+    # 7. C45 — a participacao fica de fora e e somada depois
+    cota_bde = min(percentual_idepe + bonus_eq + bonus_el, TETO_COTA_BDE)
+
+    # 8. Total, no teto de 300%
+    percentual_final = min(cota_bde + bonus_part, TETO_BDE)
 
     return RespostaBDE(
         percentual_bde=percentual_final,
         percentual_formatado=f"{percentual_final * 100:.0f}%",
-        apto_a_receber=apto,
         media_ponderada_variacao=media,
         percentual_idepe=percentual_idepe,
+        bonus_equidade=bonus_eq,
+        bonus_elementares=bonus_el,
+        bonus_participacao=bonus_part,
         cota_resultado=cota_resultado,
         cota_alem_resultado=cota_alem,
-        cota_equidade=cota_eq,
-        cota_elementares=cota_el,
-        cota_participacao=cota_part,
         cota_bde_calculada=cota_bde,
-        bonus_equidade=cota_eq,
-        bonus_elementares=cota_el,
-        bonus_participacao=cota_part,
+        apto_a_receber=percentual_final > 0.0,
         etapas=detalhes,
     )

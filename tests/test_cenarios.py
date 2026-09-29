@@ -1,9 +1,14 @@
 """
-Tabela de conferencia da regra do BDE 2027.
+Tabela de conferencia da regra do BDE, conforme src/bde/schemas.py:
 
-Cada cenario aqui foi descrito pelo gestor da regra, nao derivado do codigo.
-Se um deles quebrar, ou a regra mudou e este arquivo precisa mudar junto, ou o
-motor saiu do combinado — nunca "o teste esta errado".
+    cota_bde       = min(percentual_idepe + equidade + elementares, 2.5)
+    percentual_bde = min(cota_bde + participacao, 3.0)
+
+Se um cenario quebrar, ou a regra mudou e este arquivo precisa mudar junto, ou
+o motor saiu do combinado — nunca "o teste esta errado".
+
+Alem dos cenarios, confere a propriedade que a regra garante: o percentual
+final e sempre multiplo de 25%, nunca um valor quebrado.
 
     python3 tests/test_cenarios.py
 """
@@ -11,6 +16,7 @@ motor saiu do combinado — nunca "o teste esta errado".
 from __future__ import annotations
 
 import sys
+from itertools import product
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -20,94 +26,103 @@ from src.bde.schemas import EtapaIDEPE, RequisicaoBDE  # noqa: E402
 from src.bde.service import calcular_bde  # noqa: E402
 
 
-def etapa(matriculas: int, participou: bool, meta=None, resultado=None) -> EtapaIDEPE:
-    return EtapaIDEPE(
-        matriculas=matriculas,
-        participacao_maior_80=participou,
-        meta=meta,
-        resultado=resultado,
-    )
+def etapa(matriculas: int, meta: float, resultado: float) -> EtapaIDEPE:
+    return EtapaIDEPE(matriculas=matriculas, meta=meta, resultado=resultado)
 
 
 # (id, descricao, requisicao, idepe esperado, bde esperado)
 CENARIOS = [
     (
         "A",
-        "1 etapa, sem 80%, sem equidade — pior caso possivel",
+        "1 etapa, -0,50, nada mais — pior caso possivel",
         RequisicaoBDE(
-            etapa_ai=etapa(300, False),
+            etapa_ai=etapa(300, 4.50, 4.00),
             reduziu_desigualdade=False,
             terco_menor_elementares=False,
+            participacao_maior_80=False,
         ),
         0.0,
         0.0,
     ),
     (
         "B",
-        "1 etapa, sem 80%, os dois quesitos — teto do caminho zerado",
+        "1 etapa, -0,50, 2 quesitos + participacao",
         RequisicaoBDE(
-            etapa_ai=etapa(300, False),
+            etapa_ai=etapa(300, 4.50, 4.00),
             reduziu_desigualdade=True,
             terco_menor_elementares=True,
+            participacao_maior_80=True,
         ),
         0.0,
-        2.0,
+        2.5,
     ),
     (
         "C",
-        "1 etapa, com 80%, +0,05, 1 quesito — igual ao ciclo anterior",
+        "1 etapa, +0,05, 1 quesito + participacao",
         RequisicaoBDE(
-            etapa_ai=etapa(300, True, meta=4.50, resultado=4.55),
+            etapa_ai=etapa(300, 4.50, 4.55),
             reduziu_desigualdade=True,
             terco_menor_elementares=False,
+            participacao_maior_80=True,
         ),
         1.0,
         2.5,
     ),
     (
         "D",
-        "1 etapa, com 80%, +0,05, 2 quesitos — a mudanca da equidade",
+        "1 etapa, +0,05, 2 quesitos + participacao — C45 trava em 250%",
         RequisicaoBDE(
-            etapa_ai=etapa(300, True, meta=4.50, resultado=4.55),
+            etapa_ai=etapa(300, 4.50, 4.55),
             reduziu_desigualdade=True,
             terco_menor_elementares=True,
+            participacao_maior_80=True,
         ),
         1.0,
         3.0,
     ),
     (
         "E",
-        "AI 300 com 80% (+0,40), EM 100 sem 80%, 1 quesito — diluicao",
+        "1 etapa, +0,40, sem quesitos nem participacao — IDEPE cheio",
         RequisicaoBDE(
-            etapa_ai=etapa(300, True, meta=4.50, resultado=4.90),
-            etapa_em=etapa(100, False),
-            reduziu_desigualdade=True,
+            etapa_ai=etapa(300, 4.50, 4.90),
+            reduziu_desigualdade=False,
             terco_menor_elementares=False,
+            participacao_maior_80=False,
         ),
-        1.5,
-        2.5,
+        2.0,
+        2.0,
     ),
     (
         "F",
-        "3 etapas todas com 80% — regressao: IDEPE nao pode mudar",
+        "3 etapas, media 0,2225, 1 quesito + participacao",
         RequisicaoBDE(
-            etapa_ai=etapa(317, True, meta=4.5, resultado=4.7),
-            etapa_af=etapa(83, True, meta=5.1, resultado=5.0),
-            etapa_em=etapa(1234, True, meta=3.8, resultado=4.05),
+            etapa_ai=etapa(317, 4.5, 4.7),
+            etapa_af=etapa(83, 5.1, 5.0),
+            etapa_em=etapa(1234, 3.8, 4.05),
             reduziu_desigualdade=True,
             terco_menor_elementares=False,
+            participacao_maior_80=True,
         ),
         1.5,
-        2.5,
+        3.0,
+    ),
+    (
+        "G",
+        "2 etapas com pesos 2:1, media +0,05 — sem valor quebrado",
+        RequisicaoBDE(
+            etapa_ai=etapa(200, 4.50, 4.60),
+            etapa_af=etapa(100, 5.00, 4.95),
+            reduziu_desigualdade=False,
+            terco_menor_elementares=False,
+            participacao_maior_80=True,
+        ),
+        1.0,
+        1.5,
     ),
 ]
 
-# Valores do ciclo anterior para o caso F, colhidos antes da mudanca da regra.
-# A diluicao nao pode encostar em escola com todas as etapas aprovadas.
-REGRESSAO_F = {"media": 0.2225, "idepe": 1.5}
 
-
-def main() -> int:
+def conferir_cenarios() -> list[str]:
     falhas = []
 
     print(f"{'#':<3} {'IDEPE':>8} {'BDE':>8}  cenario")
@@ -133,19 +148,44 @@ def main() -> int:
                 f"{ident}: BDE deu {r.percentual_bde}, esperado {bde_esperado}"
             )
 
-        if ident == "F":
-            if r.media_ponderada_variacao != REGRESSAO_F["media"]:
-                falhas.append(
-                    f"F: media ponderada deu {r.media_ponderada_variacao}, "
-                    f"o ciclo anterior dava {REGRESSAO_F['media']}"
-                )
-            if r.percentual_idepe != REGRESSAO_F["idepe"]:
-                falhas.append(
-                    f"F: IDEPE deu {r.percentual_idepe}, "
-                    f"o ciclo anterior dava {REGRESSAO_F['idepe']}"
-                )
-
     print("-" * 72)
+    return falhas
+
+
+def conferir_sem_valor_quebrado() -> tuple[int, list[str]]:
+    """Varre combinacoes de etapas e respostas: todo BDE e multiplo de 25%."""
+    resultados = [x / 100 for x in range(380, 521, 3)]
+    pesos = [(1, 1, 1), (317, 83, 1234), (1000, 7, 50), (8, 50000, 333)]
+    falhas = []
+    total = 0
+
+    for (m_ai, m_af, m_em), r_ai, r_em, (eq, el, part) in product(
+        pesos, resultados, [3.7, 4.05, 4.4], product([True, False], repeat=3)
+    ):
+        r = calcular_bde(
+            RequisicaoBDE(
+                etapa_ai=etapa(m_ai, 4.5, r_ai),
+                etapa_af=etapa(m_af, 5.1, 5.0),
+                etapa_em=etapa(m_em, 3.8, r_em),
+                reduziu_desigualdade=eq,
+                terco_menor_elementares=el,
+                participacao_maior_80=part,
+            )
+        )
+        total += 1
+        if (r.percentual_bde * 4) % 1 != 0:
+            falhas.append(
+                f"BDE quebrado: {r.percentual_bde} (AI {m_ai}/{r_ai}, "
+                f"AF {m_af}, EM {m_em}/{r_em}, eq={eq}, el={el}, part={part})"
+            )
+    return total, falhas
+
+
+def main() -> int:
+    falhas = conferir_cenarios()
+    total, quebrados = conferir_sem_valor_quebrado()
+    falhas += quebrados[:5]
+
     for f in falhas:
         print("FALHA:", f)
 
@@ -154,6 +194,7 @@ def main() -> int:
         return 1
 
     print(f"\nOK — {len(CENARIOS)} cenarios conferem com a regra.")
+    print(f"OK — {total} combinacoes, nenhum BDE fora dos degraus de 25%.")
     return 0
 
 
