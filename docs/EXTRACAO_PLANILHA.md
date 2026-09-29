@@ -93,7 +93,7 @@ de negócio.
 Três achados. O primeiro é decisivo e precisa de decisão de negócio antes de
 escrevermos o `BDECalculatorService`.
 
-### 5.1 `C45` não trata os bônus como cumulativos — SUPERADO no BDE 2027
+### 5.1 `C45` e a regra de bônus do BDE 2027
 
 > **Nomenclatura.** "BDE 2027" é o bônus pago em 2027, calculado com os
 > resultados de 2026: metas 2026, matrículas 2026, SAEPE 2026, e os quesitos de
@@ -111,23 +111,36 @@ cumulativos".
 A decisão de então foi **reproduzir a planilha**, por ser mecanismo já validado
 e em uso na SEPLAG.
 
-**No BDE 2027 a regra passou a somar**, por determinação do gestor da regra:
-cada quesito de equidade atingido vale +100%, os dois valem +200%, e isso vale
-para toda escola — inclusive a que não atingiu os 80% de participação e ficou
-sem IDEPE. A `C45` e seus quatro ramos saíram do código.
+**Regra do BDE 2027 (seção 6 — Bônus), definida pelo gestor da regra.** A
+`C45` e seus quatro ramos saíram do código; a regra vigente é:
 
-**A consequência precisa estar clara para quem atende o gestor:** a planilha em
-circulação e o simulador passam a divergir de propósito. Uma escola com IDEPE
-de 100% e os dois quesitos de equidade vê 250% na planilha e 300% aqui. Quem
-manda é a regra do BDE 2027; a planilha é que está desatualizada.
-
-O total passou a ser:
+1. **Equidade e elementares não somam entre si.** Atingir um ou os dois vale
+   +100% uma vez só. Vale para toda escola, inclusive a que ficou sem IDEPE.
+   Quem atinge os dois aparece com a cota em `bonus_equidade`.
+2. **O excedente acima de 100% só soma com o quesito a partir de 200% de
+   IDEPE** (variação ≥ 0,4 em relação à meta, já com a diluição da §5.1-b).
+   Abaixo disso, a escola com quesito troca o excedente pelo quesito e o
+   resultado para em 100%. Sem quesito, o IDEPE conta inteiro, até 200%.
+3. **Os +50% de participação exigem 80% em todas as etapas.**
 
 ```python
-cota_resultado = min(percentual_idepe, 1.0)
-cota_bde = cota_resultado + (1.0 se equidade) + (1.0 se elementares)
-percentual_bde = min(cota_bde + (0.5 se alguma etapa com 80%), 3.0)
+tem_quesito = equidade or elementares
+if tem_quesito and percentual_idepe < 2.0:
+    cota_resultado = min(percentual_idepe, 1.0)
+else:
+    cota_resultado = percentual_idepe
+cota_bde = cota_resultado + (1.0 se tem_quesito)
+percentual_bde = min(cota_bde + (0.5 se todas as etapas com 80%), 3.0)
 ```
+
+| IDEPE | Sem quesito | Com quesito (1 ou 2) |
+|---|---|---|
+| 0% a 100% | IDEPE | IDEPE + 100% |
+| 125% a 175% | IDEPE | 200% |
+| 200% | 200% | 300% |
+
+Some +50% se todas as etapas tiveram 80%, com teto de 300%. Os casos estão
+travados em `tests/test_cenarios.py`.
 
 Registro do que ficou para trás: o 3º ramo da `C45` (`(B40+B41)>1 → 2`) era
 **inalcançável e redundante** — inalcançável porque `B40` é `min(H45; 1)`, logo
@@ -146,8 +159,7 @@ tem IDEPE:
 - A média ponderada (`H47`) roda **só entre as etapas aprovadas**, porque só
   elas têm variação. O percentual convertido é então reduzido na proporção das
   matrículas que ficaram de fora.
-- O +50% continua existindo e basta **uma** etapa atingir os 80% para a escola
-  somá-lo.
+- O +50% só é somado se **todas** as etapas atingirem os 80%.
 
 A ordem importa: a diluição acontece **depois** da conversão, não antes. Uma
 etapa sem meta e sem resultado não tem variação para entrar no `H47`. Com essa

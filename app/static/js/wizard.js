@@ -382,10 +382,7 @@ function montarResumo() {
 
     const eq = r.reduziu_desigualdade;
     const el = r.terco_menor_elementares;
-    const part = ['ai', 'af', 'em'].some((chave) => {
-        const d = r[`etapa_${chave}`];
-        return d && d.participacao_maior_80;
-    });
+    const part = estado.resultadoApi.bonus_participacao > 0;
 
     html += `
         <div class="resumo-item ${eq ? 'sim' : 'nao'}">
@@ -398,7 +395,7 @@ function montarResumo() {
         </div>
         <div class="resumo-item ${part ? 'sim' : 'nao'}">
             <div class="resumo-icone">${part ? '+' : '-'}</div>
-            <div class="resumo-texto"><strong>Participação:</strong> ${part ? 'Ao menos uma etapa atingiu >= 80% no SAEPE' : 'Nenhuma etapa atingiu 80% de participação'}</div>
+            <div class="resumo-texto"><strong>Participação:</strong> ${part ? 'Todas as etapas atingiram >= 80% no SAEPE' : 'Ao menos uma etapa não atingiu 80% de participação'}</div>
         </div>`;
 
     const motivos = [];
@@ -418,7 +415,7 @@ function montarResumo() {
         motivos.push('não teve IDEPE divulgado em nenhuma etapa, por falta de participação');
     }
     if (eq) motivos.push('reduziu desigualdades de PPI e renda');
-    if (el) motivos.push('está entre as escolas com menor % de estudantes nos padrões elementares');
+    else if (el) motivos.push('está entre as escolas com menor % de estudantes nos padrões elementares');
     if (part) motivos.push('atingiu participação igual ou superior a 80%');
 
     if (motivos.length > 0) {
@@ -581,23 +578,23 @@ const METRICAS_CONTEUDO = {
     },
     'cota-resultado': {
         titulo: 'Cota Resultado',
-        texto: 'A Cota Resultado é a parcela do percentual IDEPE que equivale a até 100%, e representa o ganho base pelo desempenho. Se o percentual IDEPE passar de 100%, o excedente vai para a "Cota Além do Resultado" e não entra na soma do BDE — superar muito a meta não aumenta o bônus.'
+        texto: 'A Cota Resultado é a parte do percentual IDEPE que entra na soma do BDE. Sem bônus de equidade ou de elementares, ela é o percentual IDEPE inteiro, até 200%. Com um desses bônus, o excedente acima de 100% só continua somando se a escola chegar a 200% (variação de 0,4 ou mais em relação à meta); abaixo disso, a escola troca o excedente pelo bônus e a Cota Resultado fica em até 100%.'
     },
     'equidade': {
         titulo: 'Redução de Desigualdades',
-        texto: 'Este bônus avalia se houve evolução, no SAEPE 2026, dos estudantes Pretos, Pardos e Indígenas (PPI) e daqueles de nível socioeconômico mais baixo, em comparação com 2025. Caso positivo, a escola soma 100% ao cálculo do BDE. Vale para qualquer escola, tenha ela atingido ou não os 80% de participação — é a única parcela que sobra para quem ficou sem IDEPE.'
+        texto: 'Este bônus avalia se houve evolução, no SAEPE 2026, dos estudantes Pretos, Pardos e Indígenas (PPI) e daqueles de nível socioeconômico mais baixo, em comparação com 2025. Caso positivo, a escola soma 100% ao cálculo do BDE. Não soma com o bônus de Elementares: quem atinge os dois recebe 100%, e ele aparece aqui. Vale para qualquer escola, tenha ela atingido ou não os 80% de participação.'
     },
     'elementares': {
         titulo: 'Elementares (1/3 inferior)',
-        texto: 'Este bônus é destinado às escolas que estão entre o primeiro terço (33,3%) com menor percentual de estudantes nos níveis elementares (PD 1 e 2), na comparação com escolas do mesmo tipo dentro da mesma Macrorregião. Caso positivo, a escola soma outros 100%. Os dois quesitos de equidade somam entre si: atingir os dois vale 200%.'
+        texto: 'Este bônus é destinado às escolas que estão entre o primeiro terço (33,3%) com menor percentual de estudantes nos níveis elementares (PD 1 e 2), na comparação com escolas do mesmo tipo dentro da mesma Macrorregião. Caso positivo, a escola soma 100%. Não soma com o bônus de Equidade: quem atinge os dois recebe 100% uma vez só, contado em Equidade, e este card mostra 0%.'
     },
     'participacao': {
         titulo: 'Participação ≥ 80%',
-        texto: 'A participação é verificada por etapa e funciona como condição para o IDEPE: etapa que não atinge 80% não tem resultado divulgado e entra no cálculo com 0% de atingimento. Além disso, basta uma etapa atingir os 80% para a escola somar uma cota adicional de 50% no BDE.'
+        texto: 'A participação é verificada por etapa e funciona como condição para o IDEPE: etapa que não atinge 80% não tem resultado divulgado e entra no cálculo com 0% de atingimento. A cota adicional de 50% no BDE exige que TODAS as etapas atinjam os 80%: uma etapa abaixo disso já tira a cota.'
     },
     'cota-bde': {
         titulo: 'Cota BDE Calculada',
-        texto: 'A Cota BDE soma a Cota Resultado (até 100%) com os bônus de Equidade e de Elementares (100% cada), chegando a até 300%. A Participação acrescenta mais 50% ao total, que é então limitado ao teto de 300% do BDE.'
+        texto: 'A Cota BDE soma a Cota Resultado com o bônus de Equidade ou de Elementares (100%, uma vez só). A Participação acrescenta mais 50% ao total, que é então limitado ao teto de 300% do BDE.'
     }
 };
 

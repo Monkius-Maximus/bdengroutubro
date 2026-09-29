@@ -92,27 +92,23 @@ em nenhum dígito digitado pelo gestor. Regressão coberta por
 
 ## B. Interpretação da regra
 
-### B1. Assumir que os bônus NÃO são cumulativos — [Invertido no BDE 2027]
-Até o BDE 2026 valia o contrário: a `C45` usava `OR` e ter os dois quesitos de
-equidade valia o mesmo que ter um só. **No BDE 2027 os quesitos somam**: cada
-um vale +100%, os dois valem +200%.
+### B1. Assumir que os quesitos de equidade são cumulativos — [Mitigado]
+No BDE 2027 equidade e elementares **não somam**: atingir um ou os dois vale
++100% uma vez só. Uma versão anterior deste simulador somava os dois (+200%);
+foi revertido pela seção 6 da regra.
 
-*O caminho ruim agora é o inverso* — repetir para o gestor a explicação antiga,
-ou comparar o resultado com a planilha em circulação, que ainda usa `OR`. Uma
-escola com IDEPE de 100% e os dois quesitos vê 250% na planilha e 300% aqui.
-
-*Mitigação:* `EXTRACAO_PLANILHA.md` §5.1 registra a mudança e a divergência
-proposital com a planilha. `tests/test_cenarios.py` trava o cenário D, que é
-exatamente esse caso.
+*Mitigação:* `EXTRACAO_PLANILHA.md` §5.1 registra a regra.
+`tests/test_cenarios.py` trava os cenários B e D, que são exatamente esse caso.
 
 ### B2. Esperar que desempenho acima da meta sempre aumente a cota — [Mitigado]
-Em `C45`, `B41` (cota além do resultado) é descartada no caminho normal. Sem
-bônus, 200% de IDEPE rende exatamente o mesmo que 100%. É o caminho mais
-provável de contestação: a escola que mais superou a meta não vê diferença.
+No BDE 2027, sem quesito de equidade o IDEPE conta inteiro, até 200%. Com
+quesito, o excedente acima de 100% só soma se a escola chegar a 200% de IDEPE
+(variação ≥ 0,4); entre 100% e 200% a escola troca o excedente pelo quesito e
+fica em 200%. É o caminho mais provável de contestação: com quesito, 125% e
+175% de IDEPE rendem o mesmo.
 
-*Mitigação:* `cota_alem_resultado` continua exposta na resposta e o popup da
-"Cota Resultado" diz, em palavras, que o excedente não entra na soma. O ciclo
-2026 não mudou isso: a cota de resultado segue limitada a 100%.
+*Mitigação:* `cota_alem_resultado` expõe a parte trocada pelo quesito e o popup
+da "Cota Resultado" explica a troca em palavras.
 
 ### B2b. Prometer valores intermediários que a regra não produz — [Mitigado]
 A regra produz um conjunto pequeno de valores distintos, e um texto do tipo
@@ -122,18 +118,18 @@ o mesmo 300% — IDEPE de 100% com os dois quesitos e participação dá 350% an
 do teto, e o gestor não vê diferença se melhorar.
 
 *Mitigação:* os `alertas` dizem a condição exata e completa do teto (IDEPE de
-200% + as duas metas de equidade + participação), em vez de uma distância. A
+200% + um quesito de equidade), em vez de uma distância. A
 barra de progresso mede **passos do formulário** ("Passo 3 de 8"), nunca
 proximidade do teto — são coisas diferentes e a rotulagem explicita qual delas
 está na tela.
 
 ### B2c. Orientar a escola a "superar mais a meta" — [Mitigado]
-Conselho intuitivo e quase sempre inútil: acima de 100% de IDEPE a cota de
-resultado não muda mais. Uma escola em 125% ganha muito mais perseguindo um
-quesito de equidade (+100 pontos) do que subindo o IDEPE. No BDE 2027 isso
-ficou mais forte, porque os dois quesitos somam +200.
+Com um quesito de equidade, subir o IDEPE entre 100% e 175% não muda nada: a
+escola já está em 200% pela troca. Só chegar a 200% de IDEPE soma de novo. Uma
+escola em 125% sem quesito ganha mais perseguindo um quesito (+75 pontos) do
+que subindo o IDEPE uma faixa (+25).
 
-*Mitigação:* o popup da "Cota Resultado" diz que o excedente não entra na soma.
+*Mitigação:* o popup da "Cota Resultado" explica a troca.
 
 ### B3. Tratar a participação como só um bônus — [Invertido no BDE 2027]
 Até o BDE 2026 a participação era apenas uma cota adicional de 50%, e o
@@ -142,11 +138,11 @@ coisas**, e por etapa:
 
 - **Portão:** etapa sem 80% não tem IDEPE divulgado e entra com 0% de
   atingimento, pesando pelas matrículas.
-- **Bônus:** basta uma etapa atingir os 80% para a escola somar +50%.
+- **Bônus:** os +50% só entram se **todas** as etapas atingirem os 80%.
 
 *O caminho ruim agora é dizer que a escola "perde tudo" sem participação.* Ela
 não perde: os quesitos de equidade continuam valendo, e uma escola sem nenhuma
-participação ainda chega a 200% se atingir os dois. Só chega a 0% quem não
+participação ainda chega a 100% com um quesito. Só chega a 0% quem não
 atinge nem participação nem equidade.
 
 *Mitigação:* `participacao_maior_80` é campo de `EtapaIDEPE`, não da requisição,

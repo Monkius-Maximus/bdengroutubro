@@ -16,14 +16,19 @@
      H47           media ponderada das variacoes, SO entre as aprovadas
      H45           conversao da media em percentual de atingimento
      diluicao      percentual x (matriculas aprovadas / matriculas totais)
-     B40 / B41     cota resultado = min(idepe; 1) / cota alem (informativa)
-     equidade      +100% por quesito atingido, os dois somam +200%
-     participacao  +50% se QUALQUER etapa atingiu 80%
-     total         min(B40 + equidade + elementares + participacao; 3.0)
+     equidade      +100% se reduziu desigualdade OU esta no terco de
+                   elementares — os dois quesitos nao somam entre si
+     B40           cota resultado:
+                     sem quesito de equidade      idepe inteiro
+                     com quesito e IDEPE < 200%   min(idepe; 1)
+                     com quesito e IDEPE = 200%   idepe inteiro
+     B41           cota alem = idepe - B40, a parte trocada pelo quesito
+     participacao  +50% so se TODAS as etapas atingiram 80%
+     total         min(B40 + equidade + participacao; 3.0)
 
-   A formula C45 da planilha nao vale mais: ela tratava os dois quesitos de
-   equidade com OU. A regra do BDE 2027 soma por quesito, entao o simulador
-   diverge da planilha de proposito. Ver docs/EXTRACAO_PLANILHA.md secao 5.1.
+   O excedente acima de 100% e o quesito de equidade so se acumulam quando a
+   escola chega a 200% de IDEPE (variacao >= 0,4). Ver
+   docs/EXTRACAO_PLANILHA.md secao 5.1.
 
    A diluicao acontece DEPOIS da conversao, nao antes: uma etapa sem meta e sem
    resultado nao tem variacao para entrar no H47. Assim, enquanto todas as
@@ -31,9 +36,12 @@
    anterior.
    ============================================================================ */
 
-var COTA_POR_QUESITO_EQUIDADE = 1.0;
+var COTA_EQUIDADE = 1.0;
 var COTA_PARTICIPACAO = 0.5;
 var TETO_BDE = 3.0;
+
+// IDEPE a partir do qual o excedente acima de 100% soma com a equidade.
+var IDEPE_ACUMULA_COM_EQUIDADE = 2.0;
 
 // Faixas da validacao de dados da planilha (B6:B8 e B19/B20 etc.).
 var MATRICULAS_MIN = 8;
@@ -149,16 +157,23 @@ function simularBde(payload) {
     var matTotal = detalhes.reduce(function (s, d) { return s + d.matriculas; }, 0);
     var percentualIdepe = arredondarExcel(pctAprovadas * (matAprovadas / matTotal));
 
-    // B40 / B41. A parcela acima de 100% continua fora da soma; fica exposta
-    // para o gestor entender por que superar muito a meta nao mudou nada.
-    var cotaResultado = Math.min(percentualIdepe, 1.0);
-    var cotaAlemResultado = Math.max(percentualIdepe - cotaResultado, 0.0);
+    // Equidade: um quesito basta e os dois valem o mesmo que um. Vale para
+    // toda escola, tenha ou nao passado no portao da participacao. Quem
+    // atinge os dois aparece com a cota em equidade.
+    var bonusEquidade = payload.reduziu_desigualdade ? COTA_EQUIDADE : 0.0;
+    var bonusElementares = payload.terco_menor_elementares && !payload.reduziu_desigualdade
+        ? COTA_EQUIDADE : 0.0;
+    var temQuesito = bonusEquidade + bonusElementares > 0.0;
 
-    // Equidade soma por quesito e vale para toda escola, tenha ou nao passado
-    // no portao da participacao.
-    var bonusEquidade = payload.reduziu_desigualdade ? COTA_POR_QUESITO_EQUIDADE : 0.0;
-    var bonusElementares = payload.terco_menor_elementares ? COTA_POR_QUESITO_EQUIDADE : 0.0;
-    var bonusParticipacao = aprovadas.length > 0 ? COTA_PARTICIPACAO : 0.0;
+    // B40 / B41. Com quesito de equidade e IDEPE abaixo de 200%, a escola
+    // troca o excedente acima de 100% pelo quesito.
+    var cotaResultado = temQuesito && percentualIdepe < IDEPE_ACUMULA_COM_EQUIDADE
+        ? Math.min(percentualIdepe, 1.0)
+        : percentualIdepe;
+    var cotaAlemResultado = arredondarExcel(percentualIdepe - cotaResultado);
+
+    // Participacao: uma etapa sem 80% ja tira os +50%.
+    var bonusParticipacao = aprovadas.length === detalhes.length ? COTA_PARTICIPACAO : 0.0;
 
     var cotaBdeCalculada = cotaResultado + bonusEquidade + bonusElementares;
     var percentualBde = arredondarExcel(

@@ -214,7 +214,7 @@ class RespostaBDE(BaseModel):
     media_ponderada_variacao: float = Field(
         description=(
             "Média ponderada das variações (Resultado − Meta) "
-            "entre todas as etapas avaliadas, ponderada pelas matrículas."
+            "entre as etapas com 80% de participação, ponderada pelas matrículas."
         ),
     )
 
@@ -228,27 +228,38 @@ class RespostaBDE(BaseModel):
 
     # ---- Bônus independentes ----
     bonus_equidade: float = Field(
-        description="Bônus por redução de desigualdades PPI/Renda (0 ou 1.0)."
+        description=(
+            "Bônus por redução de desigualdades PPI/Renda (0 ou 1.0). Não soma "
+            "com o de elementares: quem atinge os dois recebe só este."
+        ),
     )
     bonus_elementares: float = Field(
-        description="Bônus por estar no 1º terço de elementares (0 ou 1.0)."
+        description=(
+            "Bônus por estar no 1º terço de elementares (0 ou 1.0). Zero "
+            "quando a escola já recebe o de equidade."
+        ),
     )
     bonus_participacao: float = Field(
-        description="Bônus por participação ≥ 80% (0 ou 0.5)."
+        description="Bônus por participação ≥ 80% em TODAS as etapas (0 ou 0.5)."
     )
 
     # ---- Cotas intermediárias (transparência do cálculo) ----
     cota_resultado: float = Field(
-        description="Cota base derivada do percentual IDEPE (máx. 1.0)."
+        description=(
+            "Parte do percentual IDEPE que entra na soma. Com quesito de "
+            "equidade e IDEPE abaixo de 200%, limitada a 1.0."
+        ),
     )
     cota_alem_resultado: float = Field(
-        description="Parcela do percentual IDEPE que ultrapassa 100% (0 a 1.0)."
+        description=(
+            "Parte do percentual IDEPE trocada pelo quesito de equidade "
+            "(0 a 1.0)."
+        ),
     )
     cota_bde_calculada: float = Field(
         description=(
-            "Cota do BDE calculada = "
-            "min(IDEPE + equidade + elementares, 2.5). "
-            "A participação é somada depois."
+            "Cota do BDE calculada = cota resultado + equidade + elementares. "
+            "A participação é somada depois, com teto de 3.0."
         ),
     )
 

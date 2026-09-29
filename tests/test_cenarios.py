@@ -1,5 +1,5 @@
 """
-Tabela de conferencia da regra do BDE 2027.
+Tabela de conferencia da regra do BDE 2027 (secao 6, bonus).
 
 Cada cenario aqui foi descrito pelo gestor da regra, nao derivado do codigo.
 Se um deles quebrar, ou a regra mudou e este arquivo precisa mudar junto, ou o
@@ -44,14 +44,14 @@ CENARIOS = [
     ),
     (
         "B",
-        "1 etapa, sem 80%, os dois quesitos — teto do caminho zerado",
+        "1 etapa, sem 80%, os dois quesitos — quesitos nao somam",
         RequisicaoBDE(
             etapa_ai=etapa(300, False),
             reduziu_desigualdade=True,
             terco_menor_elementares=True,
         ),
         0.0,
-        2.0,
+        1.0,
     ),
     (
         "C",
@@ -66,18 +66,18 @@ CENARIOS = [
     ),
     (
         "D",
-        "1 etapa, com 80%, +0,05, 2 quesitos — a mudanca da equidade",
+        "1 etapa, com 80%, +0,05, 2 quesitos — dois valem o mesmo que um",
         RequisicaoBDE(
             etapa_ai=etapa(300, True, meta=4.50, resultado=4.55),
             reduziu_desigualdade=True,
             terco_menor_elementares=True,
         ),
         1.0,
-        3.0,
+        2.5,
     ),
     (
         "E",
-        "AI 300 com 80% (+0,40), EM 100 sem 80%, 1 quesito — diluicao",
+        "AI 300 com 80% (+0,40), EM 100 sem 80%, 1 quesito — diluicao, sem +50%",
         RequisicaoBDE(
             etapa_ai=etapa(300, True, meta=4.50, resultado=4.90),
             etapa_em=etapa(100, False),
@@ -85,7 +85,7 @@ CENARIOS = [
             terco_menor_elementares=False,
         ),
         1.5,
-        2.5,
+        2.0,
     ),
     (
         "F",
@@ -99,6 +99,62 @@ CENARIOS = [
         ),
         1.5,
         2.5,
+    ),
+    (
+        "G",
+        "1 etapa, com 80%, +0,25, sem quesito — excedente conta inteiro",
+        RequisicaoBDE(
+            etapa_ai=etapa(300, True, meta=4.50, resultado=4.75),
+            reduziu_desigualdade=False,
+            terco_menor_elementares=False,
+        ),
+        1.5,
+        2.0,
+    ),
+    (
+        "H",
+        "1 etapa, com 80%, +0,40, 1 quesito — resultado e quesito acumulam",
+        RequisicaoBDE(
+            etapa_ai=etapa(300, True, meta=4.50, resultado=4.90),
+            reduziu_desigualdade=False,
+            terco_menor_elementares=True,
+        ),
+        2.0,
+        3.0,
+    ),
+    (
+        "I",
+        "1 etapa, com 80%, +0,40, sem quesito",
+        RequisicaoBDE(
+            etapa_ai=etapa(300, True, meta=4.50, resultado=4.90),
+            reduziu_desigualdade=False,
+            terco_menor_elementares=False,
+        ),
+        2.0,
+        2.5,
+    ),
+    (
+        "J",
+        "1 etapa, com 80%, -0,05, 1 quesito — abaixo da meta soma o quesito",
+        RequisicaoBDE(
+            etapa_ai=etapa(300, True, meta=4.50, resultado=4.45),
+            reduziu_desigualdade=True,
+            terco_menor_elementares=False,
+        ),
+        0.75,
+        2.25,
+    ),
+    (
+        "K",
+        "AI 300 com 80% (+0,40), EM 100 sem 80%, sem quesito",
+        RequisicaoBDE(
+            etapa_ai=etapa(300, True, meta=4.50, resultado=4.90),
+            etapa_em=etapa(100, False),
+            reduziu_desigualdade=False,
+            terco_menor_elementares=False,
+        ),
+        1.5,
+        1.5,
     ),
 ]
 
