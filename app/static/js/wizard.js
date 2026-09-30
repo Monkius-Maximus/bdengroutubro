@@ -406,19 +406,19 @@ function montarResumo() {
 
     if (comIdepe.length > 0) {
         // Abaixo de -0,3 a tabela da 0%: ai a escola nao esta na faixa.
-        if (estado.resultadoApi.percentual_idepe > 0) motivos.push('está na faixa de bonificação');
+        if (estado.resultadoApi.percentual_idepe > 0) motivos.push('Está na faixa de bonificação');
     } else {
-        motivos.push('não teve IDEPE divulgado em nenhuma etapa, por falta de participação');
+        motivos.push('Não teve IDEPE divulgado em nenhuma etapa, por falta de participação');
     }
-    if (eq) motivos.push('reduziu desigualdades de PPI e renda');
-    else if (el) motivos.push('está entre as escolas com menor % de estudantes nos padrões elementares');
-    if (part) motivos.push('atingiu participação igual ou superior a 80%');
+    if (eq) motivos.push('Reduziu desigualdades de PPI e renda');
+    else if (el) motivos.push('Está entre as escolas com menor % de estudantes nos padrões elementares');
+    if (part) motivos.push('Atingiu participação igual ou superior a 80%');
 
     if (motivos.length > 0) {
         html += `
             <div class="resumo-motivo">
-                <strong>Critérios considerados na avaliação</strong><br>
-                Porque ${motivos.join(', ')}.
+                <strong>Critérios considerados na avaliação</strong>
+                <ul>${motivos.map((m) => `<li>${m}</li>`).join('')}</ul>
             </div>`;
     }
 
