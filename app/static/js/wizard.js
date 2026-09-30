@@ -417,7 +417,7 @@ function montarResumo() {
     if (motivos.length > 0) {
         html += `
             <div class="resumo-motivo">
-                <strong>Por que sua escola pode receber o BDE?</strong><br>
+                <strong>Critérios considerados na avaliação</strong><br>
                 Porque ${motivos.join(', ')}.
             </div>`;
     }
