@@ -457,6 +457,38 @@ function mostrarResultado(r) {
     `;
 }
 
+function reiniciar() {
+    estado.stepAtual = PASSO_ETAPAS;
+    estado.resultadoApi = null;
+    estado.participacao = { ai: null, af: null, em: null };
+    estado.respostas = {
+        etapas_selecionadas: [],
+        etapa_ai: null,
+        etapa_af: null,
+        etapa_em: null,
+        reduziu_desigualdade: null,
+        terco_menor_elementares: null,
+    };
+    document.querySelectorAll('.opcao-card').forEach(c => c.classList.remove('selecionado'));
+    document.querySelectorAll('.btn-simnao').forEach(b => b.classList.remove('selecionado'));
+    document.querySelectorAll('.input-campo input').forEach(i => i.value = '');
+    ['ai', 'af', 'em'].forEach((prefixo) => {
+        document.getElementById(`idepe-${prefixo}`).style.display = 'none';
+        document.getElementById(`aviso-${prefixo}`).style.display = 'none';
+    });
+    document.getElementById('btn-proximo').style.display = 'flex';
+    document.getElementById('btn-proximo').textContent = 'Próximo';
+    document.getElementById('btn-proximo').className = 'btn btn-proximo';
+    atualizarUI();
+}
+
+function mostrarErro(msg) {
+    const toast = document.getElementById('toast-erro');
+    toast.textContent = msg;
+    toast.classList.add('visivel');
+    setTimeout(() => toast.classList.remove('visivel'), 4000);
+}
+
 /* =====================================================================
    Popups
    ===================================================================== */
