@@ -375,7 +375,7 @@ function montarResumo() {
             <div class="resumo-item ${parseFloat(variacao) >= 0 ? 'sim' : 'nao'}">
                 <div class="resumo-icone">${parseFloat(variacao) >= 0 ? '+' : '-'}</div>
                 <div class="resumo-texto">
-                    <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | Resultado: ${dados.resultado} | Variação: ${sinal}${variacao}
+                    <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | Resultado: ${dados.resultado} | Diferença Meta-Resultado: ${sinal}${variacao}
                 </div>
             </div>`;
     });
@@ -405,12 +405,8 @@ function montarResumo() {
         .filter((d) => d && d.participacao_maior_80);
 
     if (comIdepe.length > 0) {
-        const diffs = comIdepe.map((d) => d.resultado - d.meta);
-        const media = diffs.reduce((a, b) => a + b, 0) / diffs.length;
-        if (media >= 0.4) motivos.push('superou a meta em 0.4 pontos ou mais');
-        else if (media >= 0.1) motivos.push('superou a meta');
-        else if (media >= 0) motivos.push('atingiu ou está próximo da meta');
-        else motivos.push('ficou abaixo da meta');
+        // Abaixo de -0,3 a tabela da 0%: ai a escola nao esta na faixa.
+        if (estado.resultadoApi.percentual_idepe > 0) motivos.push('está na faixa de bonificação');
     } else {
         motivos.push('não teve IDEPE divulgado em nenhuma etapa, por falta de participação');
     }
@@ -435,11 +431,10 @@ function mostrarResumo() {
     atualizarUI();
 }
 
-function corKPI(valor) {
-    if (valor >= 2.0) return 'kpi-verde';
-    if (valor >= 1.0) return 'kpi-dourado';
-    return 'kpi-vermelho';
-}
+const MENSAGEM_PARABENS =
+    'Parabenizamos a escola pelo seu empenho e participação na educação dos jovens que compõem o presente e o futuro de nossa nação. Esperamos que essa premiação possa incentivar a buscar cada vez mais excelência, de forma a alcançar os resultados da educação esperados.';
+const MENSAGEM_INCENTIVO =
+    'De acordo com os dados inseridos, sua escola não possui os resultados necessários para uma bonificação mais alta. Continue se esforçando para melhorar os resultados futuros.';
 
 function mostrarResultado(r) {
     estado.stepAtual = PASSO_RESULTADO;
@@ -449,33 +444,7 @@ function mostrarResultado(r) {
     const badgeCor = apto
         ? (r.percentual_bde >= 2.0 ? 'var(--verde)' : r.percentual_bde >= 1.0 ? 'var(--dourado)' : 'var(--amarelo)')
         : 'var(--vermelho)';
-
-    const clsIdepe = r.percentual_idepe >= 1.0 ? 'positivo' : r.percentual_idepe >= 0.75 ? 'neutro' : 'negativo';
-
-    let etapasHtml = '';
-    if (r.etapas && r.etapas.length > 0) {
-        etapasHtml = '<div class="etapas-detalhe">';
-        r.etapas.forEach(e => {
-            // variacao nula e etapa sem IDEPE divulgado — diferente de zero,
-            // que e a etapa que participou e empatou com a meta.
-            if (e.variacao === null || e.variacao === undefined) {
-                etapasHtml += `
-                <div class="etapa-detalhe">
-                    <span class="etapa-nome">${e.nome}</span>
-                    <span class="etapa-variacao negativo">Sem participação (0%)</span>
-                </div>`;
-                return;
-            }
-            const cls = e.variacao > 0 ? 'positivo' : e.variacao === 0 ? 'neutro' : 'negativo';
-            const sinal = e.variacao > 0 ? '+' : '';
-            etapasHtml += `
-                <div class="etapa-detalhe">
-                    <span class="etapa-nome">${e.nome}</span>
-                    <span class="etapa-variacao ${cls}">${sinal}${e.variacao.toFixed(4)} (${(e.percentual_atingimento * 100).toFixed(0)}%)</span>
-                </div>`;
-        });
-        etapasHtml += '</div>';
-    }
+    const mensagem = r.percentual_bde >= 1.0 ? MENSAGEM_PARABENS : MENSAGEM_INCENTIVO;
 
     document.getElementById('resultado-area').innerHTML = `
         <div class="resultado-badge ${apto ? '' : 'badge-nao-apto'}" style="background: ${badgeCor}; color: white;">
@@ -483,151 +452,9 @@ function mostrarResultado(r) {
             <span class="label-pct">BDE</span>
         </div>
         <h2 class="resultado-titulo">${apto ? 'Escola apta a receber o BDE' : 'Escola não atingiu o mínimo'}</h2>
-        <p class="resultado-subtitulo">${apto
-            ? 'Confira o detalhamento do cálculo do seu bônus.'
-            : 'A escola não atingiu percentual mínimo para receber o bônus.'}</p>
-        <div class="detalhes-grid">
-            <div class="detalhe-card" onclick="abrirPopupMetrica('media-idepe')" role="button" tabindex="0">
-                <div class="detalhe-valor ${clsIdepe}">${(r.percentual_idepe * 100).toFixed(0)}%</div>
-                <div class="detalhe-label">Média IDEPE</div>
-                <div class="detalhe-info">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-            </div>
-            <div class="detalhe-card" onclick="abrirPopupMetrica('cota-resultado')" role="button" tabindex="0">
-                <div class="detalhe-valor">${(r.cota_resultado * 100).toFixed(0)}%</div>
-                <div class="detalhe-label">Cota Resultado</div>
-                <div class="detalhe-info">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-            </div>
-            <div class="detalhe-card" onclick="abrirPopupMetrica('equidade')" role="button" tabindex="0">
-                <div class="detalhe-valor ${r.bonus_equidade > 0 ? 'positivo' : 'negativo-bg'}">${(r.bonus_equidade * 100).toFixed(0)}%</div>
-                <div class="detalhe-label">Equidade</div>
-                <div class="detalhe-info">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-            </div>
-            <div class="detalhe-card" onclick="abrirPopupMetrica('elementares')" role="button" tabindex="0">
-                <div class="detalhe-valor ${r.bonus_elementares > 0 ? 'positivo' : 'negativo-bg'}">${(r.bonus_elementares * 100).toFixed(0)}%</div>
-                <div class="detalhe-label">Elementares (1/3 inferior)</div>
-                <div class="detalhe-info">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-            </div>
-            <div class="detalhe-card" onclick="abrirPopupMetrica('participacao')" role="button" tabindex="0">
-                <div class="detalhe-valor ${r.bonus_participacao > 0 ? 'positivo' : 'negativo-bg'}">${(r.bonus_participacao * 100).toFixed(0)}%</div>
-                <div class="detalhe-label">Participação ≥ 80%</div>
-                <div class="detalhe-info">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-            </div>
-            <div class="detalhe-card" onclick="abrirPopupMetrica('cota-bde')" role="button" tabindex="0">
-                <div class="detalhe-valor">${(r.cota_bde_calculada * 100).toFixed(0)}%</div>
-                <div class="detalhe-label">Cota BDE Calculada</div>
-                <div class="detalhe-info">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                </div>
-            </div>
-        </div>
-        ${etapasHtml}
+        <p class="resultado-mensagem">${mensagem}</p>
         <button class="btn btn-reiniciar" onclick="reiniciar()">Simular outra escola</button>
     `;
-}
-
-function reiniciar() {
-    estado.stepAtual = PASSO_ETAPAS;
-    estado.resultadoApi = null;
-    estado.participacao = { ai: null, af: null, em: null };
-    estado.respostas = {
-        etapas_selecionadas: [],
-        etapa_ai: null,
-        etapa_af: null,
-        etapa_em: null,
-        reduziu_desigualdade: null,
-        terco_menor_elementares: null,
-    };
-    document.querySelectorAll('.opcao-card').forEach(c => c.classList.remove('selecionado'));
-    document.querySelectorAll('.btn-simnao').forEach(b => b.classList.remove('selecionado'));
-    document.querySelectorAll('.input-campo input').forEach(i => i.value = '');
-    ['ai', 'af', 'em'].forEach((prefixo) => {
-        document.getElementById(`idepe-${prefixo}`).style.display = 'none';
-        document.getElementById(`aviso-${prefixo}`).style.display = 'none';
-    });
-    document.getElementById('btn-proximo').style.display = 'flex';
-    document.getElementById('btn-proximo').textContent = 'Próximo';
-    document.getElementById('btn-proximo').className = 'btn btn-proximo';
-    atualizarUI();
-}
-
-function mostrarErro(msg) {
-    const toast = document.getElementById('toast-erro');
-    toast.textContent = msg;
-    toast.classList.add('visivel');
-    setTimeout(() => toast.classList.remove('visivel'), 4000);
-}
-
-/* =====================================================================
-   Popups de Métricas (Step 7)
-   ===================================================================== */
-
-const METRICAS_CONTEUDO = {
-    'media-idepe': {
-        titulo: 'Média IDEPE',
-        texto: 'A Média IDEPE parte da variação entre o resultado obtido e a meta pactuada, ponderada pelas matrículas, e é convertida em percentual por uma tabela — variações positivas rendem percentuais maiores, até 200%. Só entram nessa média as etapas que atingiram 80% de participação, porque as demais não têm IDEPE divulgado. O percentual resultante é então reduzido na proporção das matrículas que ficaram de fora: uma etapa sem participação não some da conta, ela entra com 0%.'
-    },
-    'cota-resultado': {
-        titulo: 'Cota Resultado',
-        texto: 'A Cota Resultado é a parte do percentual IDEPE que entra na soma do BDE. Sem bônus de equidade ou de elementares, ela é o percentual IDEPE inteiro, até 200%. Com um desses bônus, o excedente acima de 100% só continua somando se a escola chegar a 200% (variação de 0,4 ou mais em relação à meta); abaixo disso, a escola troca o excedente pelo bônus e a Cota Resultado fica em até 100%.'
-    },
-    'equidade': {
-        titulo: 'Redução de Desigualdades',
-        texto: 'Este bônus avalia se houve evolução, no SAEPE 2026, dos estudantes Pretos, Pardos e Indígenas (PPI) e daqueles de nível socioeconômico mais baixo, em comparação com 2025. Caso positivo, a escola soma 100% ao cálculo do BDE. Não soma com o bônus de Elementares: quem atinge os dois recebe 100%, e ele aparece aqui. Vale para qualquer escola, tenha ela atingido ou não os 80% de participação.'
-    },
-    'elementares': {
-        titulo: 'Elementares (1/3 inferior)',
-        texto: 'Este bônus é destinado às escolas que estão entre o primeiro terço (33,3%) com menor percentual de estudantes nos níveis elementares (PD 1 e 2), na comparação com escolas do mesmo tipo dentro da mesma Macrorregião. Caso positivo, a escola soma 100%. Não soma com o bônus de Equidade: quem atinge os dois recebe 100% uma vez só, contado em Equidade, e este card mostra 0%.'
-    },
-    'participacao': {
-        titulo: 'Participação ≥ 80%',
-        texto: 'A participação é verificada por etapa e funciona como condição para o IDEPE: etapa que não atinge 80% não tem resultado divulgado e entra no cálculo com 0% de atingimento. A cota adicional de 50% no BDE exige que TODAS as etapas atinjam os 80%: uma etapa abaixo disso já tira a cota.'
-    },
-    'cota-bde': {
-        titulo: 'Cota BDE Calculada',
-        texto: 'A Cota BDE soma a Cota Resultado com o bônus de Equidade ou de Elementares (100%, uma vez só). A Participação acrescenta mais 50% ao total, que é então limitado ao teto de 300% do BDE.'
-    }
-};
-
-function abrirPopupMetrica(chave) {
-    const conteudo = METRICAS_CONTEUDO[chave];
-    if (!conteudo) return;
-
-    const overlay = document.createElement('div');
-    overlay.className = 'popup-overlay ativo';
-    overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
-
-    overlay.innerHTML = `
-        <div class="popup-conteudo popup-metrica" onclick="event.stopPropagation()">
-            <button class="popup-fechar" onclick="this.closest('.popup-overlay').remove()" aria-label="Fechar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-            </button>
-            <div class="popup-header">
-                <h3>${conteudo.titulo}</h3>
-            </div>
-            <div class="popup-body">
-                <p class="popup-metrica-texto">${conteudo.texto}</p>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(overlay);
-
-    document.addEventListener('keydown', function handler(e) {
-        if (e.key === 'Escape') {
-            overlay.remove();
-            document.removeEventListener('keydown', handler);
-        }
-    });
 }
 
 /* =====================================================================
