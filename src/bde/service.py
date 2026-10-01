@@ -1,16 +1,16 @@
 """
 Servico de calculo do BDE — BDE 2027.
 
-A participacao de 80% no SAEPE e por etapa e funciona como portao: etapa que
-nao atingiu nao tem IDEPE divulgado, entra na conta com atingimento zero e
-continua pesando pelas suas matriculas.
+A participacao de 80% no SAEPE e por etapa. Etapa que nao atingiu entra na
+media com IDEPE zero: a diferenca dela e 0 - meta, pesando pelas matriculas.
+Nenhuma etapa com matricula fica de fora da conta.
 
 Cadeia de calculo:
 
-  variacao_i       resultado - meta, so nas etapas que participaram
-  H47              media ponderada das variacoes, SO entre as aprovadas
+  idepe_i          resultado com 80% de participacao, 0 sem
+  variacao_i       idepe_i - meta, em TODAS as etapas
+  H47              media ponderada das variacoes pelas matriculas
   H45              conversao da media em percentual (tabela _TABELA)
-  diluicao         percentual x (matriculas aprovadas / matriculas totais)
   equidade         +100% se reduziu desigualdade OU esta no terco de
                    elementares — os dois quesitos nao somam entre si
   B40              cota resultado:
@@ -27,9 +27,8 @@ escola chega a 200% de IDEPE (variacao >= 0,4). Abaixo disso ela fica com o
 maior dos dois caminhos, que com quesito e sempre 100% + 100%. Ver
 docs/EXTRACAO_PLANILHA.md secao 5.1.
 
-A diluicao acontece DEPOIS da conversao, nao antes: uma etapa sem meta e sem
-resultado nao tem variacao para entrar no H47. Assim, enquanto todas as etapas
-passarem no portao, o percentual_idepe e identico ao do ciclo anterior.
+Com todas as etapas acima de 80%, o percentual_idepe e identico ao do ciclo
+anterior: o zero so muda a conta de quem tem etapa sem participacao.
 """
 
 from __future__ import annotations
@@ -80,7 +79,7 @@ COTA_PARTICIPACAO: Final[float] = 0.5
 TETO_BDE: Final[float] = 3.0
 
 # IDEPE a partir do qual o excedente acima de 100% soma com a equidade. E o
-# topo da tabela: variacao media >= 0,4 com todas as etapas aprovadas.
+# topo da tabela: variacao media >= 0,4.
 IDEPE_ACUMULA_COM_EQUIDADE: Final[float] = 2.0
 
 
@@ -111,48 +110,32 @@ def calcular_bde(req: RequisicaoBDE) -> RespostaBDE:
     if req.etapa_em is not None:
         entrada.append(("em", req.etapa_em))
 
-    # 2. Detalhe por etapa. Etapa sem 80% nao tem IDEPE divulgado: variacao
-    #    fica nula, que e diferente de zero (zero e quem empatou com a meta).
+    # 2. Detalhe por etapa. Etapa sem 80% entra com IDEPE zero, e a diferenca
+    #    dela e 0 - meta.
     detalhes: list[DetalheEtapa] = []
     for chave, etapa in entrada:
-        if etapa.participacao_maior_80:
-            variacao = round(etapa.resultado - etapa.meta, 4)
-            pct = _converter(variacao)
-        else:
-            variacao = None
-            pct = 0.0
+        idepe = etapa.resultado if etapa.participacao_maior_80 else 0.0
+        variacao = round(idepe - etapa.meta, 4)
         detalhes.append(DetalheEtapa(
             nome=_NOMES[chave],
             matriculas=etapa.matriculas,
             participou=etapa.participacao_maior_80,
             meta=etapa.meta,
-            resultado=etapa.resultado,
+            resultado=idepe,
             variacao=variacao,
-            percentual_atingimento=pct,
+            percentual_atingimento=_converter(variacao),
         ))
 
-    aprovadas = [d for d in detalhes if d.participou]
-
-    # 3. Media ponderada (H47) — so entre as aprovadas, porque so elas tem
-    #    variacao. Com nenhuma aprovada, nao ha IDEPE: a escola concorre
-    #    apenas aos quesitos de equidade.
-    mat_aprovadas = sum(d.matriculas for d in aprovadas)
-    if aprovadas:
-        soma = sum(d.variacao * d.matriculas for d in aprovadas)
-        media = round(soma / mat_aprovadas, 4)
-        pct_aprovadas = _converter(media)
-    else:
-        media = 0.0
-        pct_aprovadas = 0.0
-
-    # 4. Diluicao pelas reprovadas: elas entram com atingimento zero e com o
-    #    peso das suas matriculas. Sem reprovada nenhuma, a fracao e 1 e o
-    #    percentual e exatamente o do ciclo anterior.
+    # 3. Media ponderada (H47) entre todas as etapas, pesando pelas matriculas
     mat_total = sum(d.matriculas for d in detalhes)
-    percentual_idepe = round(pct_aprovadas * (mat_aprovadas / mat_total), 4)
+    soma = sum(d.variacao * d.matriculas for d in detalhes)
+    media = round(soma / mat_total, 4)
+
+    # 4. Conversao (H45)
+    percentual_idepe = _converter(media)
 
     # 5. Equidade: um quesito basta e os dois valem o mesmo que um. O +100%
-    #    vale para toda escola, tenha ou nao passado no portao da participacao.
+    #    vale para toda escola, tenha ou nao atingido 80% de participacao.
     #    Quem atinge os dois aparece com a cota em equidade.
     cota_eq = COTA_EQUIDADE if req.reduziu_desigualdade else 0.0
     cota_el = COTA_EQUIDADE if req.terco_menor_elementares and not req.reduziu_desigualdade else 0.0
@@ -167,7 +150,7 @@ def calcular_bde(req: RequisicaoBDE) -> RespostaBDE:
     cota_alem = round(percentual_idepe - cota_resultado, 4)
 
     # 7. Participacao: uma etapa sem 80% ja tira os +50%.
-    cota_part = COTA_PARTICIPACAO if len(aprovadas) == len(detalhes) else 0.0
+    cota_part = COTA_PARTICIPACAO if all(d.participou for d in detalhes) else 0.0
 
     # 8. Total, no teto de 300%
     cota_bde = cota_resultado + cota_eq + cota_el

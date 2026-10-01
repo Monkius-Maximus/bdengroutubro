@@ -226,9 +226,9 @@ function toggleSimNaoPergunta(btn) {
 }
 
 /**
- * Participacao da etapa. E um portao: no Sim aparecem meta e resultado; no Nao
- * eles somem, porque o IDEPE da etapa nao e divulgado, e entra o aviso de que
- * ela ainda pesa na conta com 0% de atingimento.
+ * Participacao da etapa. No Sim aparece o resultado; no Nao ele some, porque o
+ * IDEPE da etapa e considerado zero, e entra o aviso explicando isso. A meta
+ * fica na tela nos dois casos: ela entra na conta de qualquer jeito.
  */
 function toggleParticipacaoEtapa(btn) {
     const prefixo = btn.dataset.campo;
@@ -242,7 +242,6 @@ function toggleParticipacaoEtapa(btn) {
     document.getElementById(`aviso-${prefixo}`).style.display = participou ? 'none' : 'block';
 
     if (!participou) {
-        document.getElementById(`inp-${prefixo}-meta`).value = '';
         document.getElementById(`inp-${prefixo}-res`).value = '';
     }
 
@@ -267,15 +266,19 @@ function validarInputsEtapa(prefixo, silencioso = false) {
         return reclamar('Informe as matrículas da etapa (maior que zero).');
     }
 
-    // Etapa sem 80% nao tem IDEPE divulgado: matricula e tudo que existe dela.
-    if (!participou) {
-        return { matriculas: Math.round(mat), participacao_maior_80: false };
+    const meta = parseFloat(document.getElementById(`inp-${prefixo}-meta`).value);
+    if (isNaN(meta) || meta <= 0) {
+        return reclamar('Preencha a meta IDEPE com um valor válido (maior que zero).');
     }
 
-    const meta = parseFloat(document.getElementById(`inp-${prefixo}-meta`).value);
+    // Etapa sem 80% entra com IDEPE zero: nao tem resultado a informar.
+    if (!participou) {
+        return { matriculas: Math.round(mat), participacao_maior_80: false, meta };
+    }
+
     const res = parseFloat(document.getElementById(`inp-${prefixo}-res`).value);
-    if (isNaN(meta) || isNaN(res) || meta <= 0 || res <= 0) {
-        return reclamar('Preencha meta e resultado IDEPE com valores válidos (maiores que zero).');
+    if (isNaN(res) || res <= 0) {
+        return reclamar('Preencha o resultado IDEPE com um valor válido (maior que zero).');
     }
     return {
         matriculas: Math.round(mat),
@@ -304,8 +307,8 @@ document.addEventListener('focusout', (e) => {
 
     // So valida quando os campos esperados tem algo digitado: sair de
     // "Matriculas" para preencher "Meta" nao e erro, e o toast a cada tab era
-    // ruido. Etapa sem participacao espera so a matricula.
-    const esperados = estado.participacao[prefixo] ? ['mat', 'meta', 'res'] : ['mat'];
+    // ruido. Etapa sem participacao nao tem resultado.
+    const esperados = estado.participacao[prefixo] ? ['mat', 'meta', 'res'] : ['mat', 'meta'];
     const preenchidos = esperados.every(function (campo) {
         return document.getElementById(`inp-${prefixo}-${campo}`).value.trim() !== '';
     });
@@ -358,24 +361,18 @@ function montarResumo() {
         const dados = r[`etapa_${chave}`];
         if (!dados) return;
 
-        if (!dados.participacao_maior_80) {
-            html += `
-                <div class="resumo-item nao">
-                    <div class="resumo-icone">-</div>
-                    <div class="resumo-texto">
-                        <strong>${etapasNomes[chave]}</strong> — Sem participação de 80%: IDEPE não divulgado. Entra com 0% de atingimento, pesando ${dados.matriculas} matrículas.
-                    </div>
-                </div>`;
-            return;
-        }
-
-        const variacao = (dados.resultado - dados.meta).toFixed(2);
+        // Sem 80% de participacao o IDEPE considerado e zero.
+        const idepe = dados.participacao_maior_80 ? dados.resultado : 0;
+        const rotuloIdepe = dados.participacao_maior_80
+            ? `Resultado: ${idepe}`
+            : 'Resultado: 0 (sem 80% de participação)';
+        const variacao = (idepe - dados.meta).toFixed(2);
         const sinal = parseFloat(variacao) >= 0 ? '+' : '';
         html += `
             <div class="resumo-item ${parseFloat(variacao) >= 0 ? 'sim' : 'nao'}">
                 <div class="resumo-icone">${parseFloat(variacao) >= 0 ? '+' : '-'}</div>
                 <div class="resumo-texto">
-                    <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | Resultado: ${dados.resultado} | Diferença Meta-Resultado: ${sinal}${variacao}
+                    <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | ${rotuloIdepe} | Diferença Meta-Resultado: ${sinal}${variacao}
                 </div>
             </div>`;
     });
@@ -399,17 +396,8 @@ function montarResumo() {
         </div>`;
 
     const motivos = [];
-    // So as etapas com 80% tem IDEPE para comparar com a meta.
-    const comIdepe = r.etapas_selecionadas
-        .map((k) => r[`etapa_${k}`])
-        .filter((d) => d && d.participacao_maior_80);
-
-    if (comIdepe.length > 0) {
-        // Abaixo de -0,3 a tabela da 0%: ai a escola nao esta na faixa.
-        if (estado.resultadoApi.percentual_idepe > 0) motivos.push('Está na faixa de bonificação');
-    } else {
-        motivos.push('Não teve IDEPE divulgado em nenhuma etapa, por falta de participação');
-    }
+    // Abaixo de -0,3 a tabela da 0%: ai a escola nao esta na faixa.
+    if (estado.resultadoApi.percentual_idepe > 0) motivos.push('Está na faixa de bonificação');
     if (eq) motivos.push('Reduziu desigualdades de PPI e renda');
     else if (el) motivos.push('Está entre as escolas com menor % de estudantes nos padrões elementares');
     if (part) motivos.push('Atingiu participação igual ou superior a 80%');

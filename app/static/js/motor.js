@@ -6,16 +6,16 @@
    mesmo formato que a API devolvia, para que o wizard nao precise saber de
    onde veio o resultado.
 
-   A participacao de 80% no SAEPE e por etapa e funciona como portao: etapa que
-   nao atingiu nao tem IDEPE divulgado, entra na conta com atingimento zero e
-   continua pesando pelas suas matriculas.
+   A participacao de 80% no SAEPE e por etapa. Etapa que nao atingiu entra na
+   media com IDEPE zero: a diferenca dela e 0 - meta, pesando pelas
+   matriculas. Nenhuma etapa com matricula fica de fora da conta.
 
    Cadeia de calculo:
 
-     variacao_i    resultado - meta, so nas etapas que participaram
-     H47           media ponderada das variacoes, SO entre as aprovadas
+     idepe_i       resultado com 80% de participacao, 0 sem
+     variacao_i    idepe_i - meta, em TODAS as etapas
+     H47           media ponderada das variacoes pelas matriculas
      H45           conversao da media em percentual de atingimento
-     diluicao      percentual x (matriculas aprovadas / matriculas totais)
      equidade      +100% se reduziu desigualdade OU esta no terco de
                    elementares — os dois quesitos nao somam entre si
      B40           cota resultado:
@@ -30,10 +30,8 @@
    escola chega a 200% de IDEPE (variacao >= 0,4). Ver
    docs/EXTRACAO_PLANILHA.md secao 5.1.
 
-   A diluicao acontece DEPOIS da conversao, nao antes: uma etapa sem meta e sem
-   resultado nao tem variacao para entrar no H47. Assim, enquanto todas as
-   etapas passarem no portao, o percentual_idepe e identico ao do ciclo
-   anterior.
+   Com todas as etapas acima de 80%, o percentual_idepe e identico ao do ciclo
+   anterior: o zero so muda a conta de quem tem etapa sem participacao.
    ============================================================================ */
 
 var COTA_EQUIDADE = 1.0;
@@ -119,46 +117,29 @@ function simularBde(payload) {
         );
     }
 
-    // Etapa sem 80% nao tem IDEPE divulgado: variacao fica nula, que e
-    // diferente de zero — zero e quem participou e empatou com a meta.
+    // Etapa sem 80% entra com IDEPE zero, e a diferenca dela e 0 - meta.
     var detalhes = etapas.map(function (e) {
-        var participou = e.participou;
-        var variacao = participou ? arredondarExcel(e.resultado - e.meta) : null;
+        var idepe = e.participou ? e.resultado : 0.0;
+        var variacao = arredondarExcel(idepe - e.meta);
         return {
             nome: e.nome,
             matriculas: e.matriculas,
-            participou: participou,
-            meta: participou ? e.meta : null,
-            resultado: participou ? e.resultado : null,
+            participou: e.participou,
+            meta: e.meta,
+            resultado: idepe,
             variacao: variacao,
-            percentual_atingimento: participou
-                ? converterDiferencaEmPercentual(variacao)
-                : 0.0,
+            percentual_atingimento: converterDiferencaEmPercentual(variacao),
         };
     });
 
-    var aprovadas = detalhes.filter(function (d) { return d.participou; });
-
-    // H47 — so entre as aprovadas, porque so elas tem variacao. Com nenhuma
-    // aprovada nao ha IDEPE: a escola concorre apenas aos quesitos de equidade.
-    var matAprovadas = aprovadas.reduce(function (s, d) { return s + d.matriculas; }, 0);
-    var mediaVariacao = 0.0;
-    var pctAprovadas = 0.0;
-    if (aprovadas.length > 0) {
-        var soma = aprovadas.reduce(function (s, d) {
-            return s + d.variacao * d.matriculas;
-        }, 0);
-        mediaVariacao = arredondarExcel(soma / matAprovadas);
-        pctAprovadas = converterDiferencaEmPercentual(mediaVariacao);
-    }
-
-    // Diluicao pelas reprovadas: atingimento zero, peso das matriculas. Sem
-    // reprovada nenhuma a fracao e 1 e o percentual e o do ciclo anterior.
+    // H47 entre todas as etapas, pesando pelas matriculas
     var matTotal = detalhes.reduce(function (s, d) { return s + d.matriculas; }, 0);
-    var percentualIdepe = arredondarExcel(pctAprovadas * (matAprovadas / matTotal));
+    var soma = detalhes.reduce(function (s, d) { return s + d.variacao * d.matriculas; }, 0);
+    var mediaVariacao = arredondarExcel(soma / matTotal);
+    var percentualIdepe = converterDiferencaEmPercentual(mediaVariacao);
 
     // Equidade: um quesito basta e os dois valem o mesmo que um. Vale para
-    // toda escola, tenha ou nao passado no portao da participacao. Quem
+    // toda escola, tenha ou nao atingido 80% de participacao. Quem
     // atinge os dois aparece com a cota em equidade.
     var bonusEquidade = payload.reduziu_desigualdade ? COTA_EQUIDADE : 0.0;
     var bonusElementares = payload.terco_menor_elementares && !payload.reduziu_desigualdade
@@ -173,7 +154,8 @@ function simularBde(payload) {
     var cotaAlemResultado = arredondarExcel(percentualIdepe - cotaResultado);
 
     // Participacao: uma etapa sem 80% ja tira os +50%.
-    var bonusParticipacao = aprovadas.length === detalhes.length ? COTA_PARTICIPACAO : 0.0;
+    var bonusParticipacao = detalhes.every(function (d) { return d.participou; })
+        ? COTA_PARTICIPACAO : 0.0;
 
     var cotaBdeCalculada = cotaResultado + bonusEquidade + bonusElementares;
     var percentualBde = arredondarExcel(

@@ -136,8 +136,8 @@ Até o BDE 2026 a participação era apenas uma cota adicional de 50%, e o
 caminho ruim era chamá-la de eliminatória. **No BDE 2027 ela é as duas
 coisas**, e por etapa:
 
-- **Portão:** etapa sem 80% não tem IDEPE divulgado e entra com 0% de
-  atingimento, pesando pelas matrículas.
+- **IDEPE zero:** etapa sem 80% entra na média com IDEPE zero; a diferença
+  dela (`0 − meta`) pesa pelas matrículas e costuma zerar o IDEPE da escola.
 - **Bônus:** os +50% só entram se **todas** as etapas atingirem os 80%.
 
 *O caminho ruim agora é dizer que a escola "perde tudo" sem participação.* Ela
@@ -145,9 +145,9 @@ não perde: os quesitos de equidade continuam valendo, e uma escola sem nenhuma
 participação ainda chega a 100% com um quesito. Só chega a 0% quem não
 atinge nem participação nem equidade.
 
-*Mitigação:* `participacao_maior_80` é campo de `EtapaIDEPE`, não da requisição,
-e um `model_validator` recusa meta e resultado em etapa que não participou —
-IDEPE não divulgado não entra por engano.
+*Mitigação:* `participacao_maior_80` é campo de `EtapaIDEPE`, não da requisição.
+A meta é obrigatória em toda etapa, e um `model_validator` recusa resultado em
+etapa que não participou — o zero entra pelo cálculo, nunca digitado à mão.
 
 ### B4. Fixar 50% como o valor eterno da cota de participação — [Mitigado]
 No ciclo BDE 2025 (resultados de 2024) essa cota foi de **25%**. O percentual
