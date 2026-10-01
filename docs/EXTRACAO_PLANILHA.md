@@ -93,50 +93,110 @@ de negócio.
 Três achados. O primeiro é decisivo e precisa de decisão de negócio antes de
 escrevermos o `BDECalculatorService`.
 
-### 5.1 `C45` não trata os bônus como cumulativos — DECIDIDO: reproduzir
+### 5.1 `C45` e a regra de bônus do BDE 2027
 
-A regra declarada diz "independentes e cumulativos". A fórmula usa
-`OR(B42=1; B43=1)`: **ter as duas condições vale o mesmo que ter uma só**,
-exceto no caso único em que o IDEPE é exatamente 200%. Além disso, `B41` é
-descartada no caminho normal. Divergem 20 das 28 combinações.
+> **Nomenclatura.** "BDE 2027" é o bônus pago em 2027, calculado com os
+> resultados de 2026: metas 2026, matrículas 2026, SAEPE 2026, e os quesitos de
+> equidade comparando 2026 com 2025. "BDE 2026" é a regra anterior, a que a
+> planilha `Simulador_Idepe_e_Atingimento_de_metas_2026.xlsx` implementa.
 
-**Decisão: reproduzir a planilha**, por ser mecanismo já validado e em uso na
-SEPLAG. O simulador web deve devolver o mesmo número que o gestor vê na
-planilha aberta na outra janela.
+**Registro histórico. Esta seção descreve a regra até o BDE 2026.**
 
-O 3º ramo (`(B40+B41)>1 → 2`) é **inalcançável e redundante**. Inalcançável
-porque `B40` é `min(H45; 1)`, logo `B40<=1` é sempre verdadeiro e o 2º ramo
-captura antes. Redundante porque, se fosse alcançado, devolveria `2` — o mesmo
-que `1+B40` com `B40=1`. Logo `C45` reduz, **sem perda de fidelidade**, a:
+A fórmula `C45` usava `OR(B42=1; B43=1)`: ter as duas condições de equidade
+valia o mesmo que ter uma só, exceto no caso único em que o IDEPE era
+exatamente 200%. `B41` era descartada no caminho normal. Divergiam 20 das 28
+combinações em relação à regra declarada, que dizia "independentes e
+cumulativos".
+
+A decisão de então foi **reproduzir a planilha**, por ser mecanismo já validado
+e em uso na SEPLAG.
+
+**Regra do BDE 2027 (seção 6 — Bônus), definida pelo gestor da regra.** A
+`C45` e seus quatro ramos saíram do código; a regra vigente é:
+
+1. **Equidade e elementares não somam entre si.** Atingir um ou os dois vale
+   +100% uma vez só. Vale para toda escola, inclusive a que ficou sem IDEPE.
+   Quem atinge os dois aparece com a cota em `bonus_equidade`.
+2. **O excedente acima de 100% só soma com o quesito a partir de 200% de
+   IDEPE** (variação média ≥ 0,4 em relação à meta, já com o zero da §5.1-b).
+   Abaixo disso, a escola com quesito troca o excedente pelo quesito e o
+   resultado para em 100%. Sem quesito, o IDEPE conta inteiro, até 200%.
+3. **Os +50% de participação exigem 80% em todas as etapas.**
 
 ```python
-if cota_resultado == 1.0 and cota_alem == 1.0 and equidade and elementares:
-    return 2.5
-if equidade or elementares:
-    return 1.0 + cota_resultado
-return cota_resultado
+tem_quesito = equidade or elementares
+if tem_quesito and percentual_idepe < 2.0:
+    cota_resultado = min(percentual_idepe, 1.0)
+else:
+    cota_resultado = percentual_idepe
+cota_bde = cota_resultado + (1.0 se tem_quesito)
+percentual_bde = min(cota_bde + (0.5 se todas as etapas com 80%), 3.0)
 ```
 
-Equivalência verificada em 804 combinações contínuas e nas 36 discretas: zero
-divergências.
+| IDEPE | Sem quesito | Com quesito (1 ou 2) |
+|---|---|---|
+| 0% a 100% | IDEPE | IDEPE + 100% |
+| 125% a 175% | IDEPE | 200% |
+| 200% | 200% | 300% |
 
-### 5.2 Buraco na faixa (−0,3; −0,2) em `H45` — DECIDIDO: reproduzir
+Some +50% se todas as etapas tiveram 80%, com teto de 300%. Os casos estão
+travados em `tests/test_cenarios.py`.
+
+Registro do que ficou para trás: o 3º ramo da `C45` (`(B40+B41)>1 → 2`) era
+**inalcançável e redundante** — inalcançável porque `B40` é `min(H45; 1)`, logo
+`B40<=1` era sempre verdadeiro e o 2º ramo capturava antes; redundante porque,
+se fosse alcançado, devolveria `2`, o mesmo que `1+B40` com `B40=1`.
+
+### 5.1-b A participação é por etapa, e etapa sem 80% entra com IDEPE zero — BDE 2027
+
+Até o BDE 2026 a participação era uma pergunta única da escola e apenas somava
+`B44` (+50%). No BDE 2027 ela é perguntada **por etapa**:
+
+- **Toda etapa com matrícula entra na média.** Nenhuma é excluída.
+- Etapa com 80% ou mais usa o IDEPE obtido. Etapa abaixo de 80% entra com
+  **IDEPE zero**: a meta continua sendo informada, e a diferença dela é
+  `0 − meta`, um valor bem negativo.
+- A média ponderada (`H47`) usa todas as etapas, pesando pelas matrículas:
+  `Σ[(IDEPE considerado − meta) × matrículas] ÷ Σ matrículas`. Depois ela é
+  convertida pela tabela (`H45`), sem nenhum ajuste adicional.
+- O +50% só é somado se **todas** as etapas atingirem os 80%.
+
+Exemplo da regra (cenário L de `tests/test_cenarios.py`): Anos Finais com 100
+matrículas, meta 5,0 e sem 80% (diferença −5,0); Ensino Médio com 50
+matrículas, meta 4,0 e resultado 4,0 (diferença 0,0). Média:
+`(−5,0 × 100 + 0,0 × 50) ÷ 150 = −3,3333`, que converte para 0%.
+
+Na prática, como as metas ficam em torno de 4 a 5 pontos, uma etapa sem 80%
+com peso relevante de matrículas leva a média para baixo de −0,3 e o IDEPE da
+escola para 0%. Escola com todas as etapas acima de 80% não muda nada em
+relação ao ciclo anterior — a regressão está travada no cenário F.
+
+Registro: uma versão anterior deste simulador excluía a etapa sem 80% da média
+e depois reduzia o percentual convertido pela fração de matrículas que ficaram
+de fora. Foi substituída por esta regra.
+
+### 5.2 Buraco na faixa (−0,3; −0,2) em `H45` — DECIDIDO: ler a grade
 
 `H45` começa com `IF(H47 < -0,3; 0; IF(H47 <= -0,3; 0,25; IF(H47 < -0,2; 0; …`.
 O terceiro teste devolve **0%** para qualquer diferença estritamente entre
 −0,3 e −0,2; só a igualdade exata a −0,3 rende 25%.
 
-**Decisão: reproduzir o comportamento**, pelo mesmo motivo da §5.1.
+A grade de consulta da mesma planilha (`E42:M43`) traz `0,25` embaixo de
+`−0,3`, e as outras oito faixas usam `≥ limite inferior`. As duas leituras da
+planilha se contradizem: é a escada de IFs que lê a própria grade errado.
 
-Registro para quem for reavaliar: a própria grade de consulta da planilha
-(`E42:M43`) traz `0,25` embaixo de `−0,3`, e as outras oito faixas usam
-`≥ limite inferior`. É a escada de IFs que lê a grade errado. **Recomendamos
-levar o ponto ao Núcleo da SEPLAG** (Zaplag (81) 98494-4837, nota 6 da
-planilha): se confirmado como erro de digitação, basta trocar a ordem dos dois
-primeiros testes em `converter_diferenca_em_percentual`.
+**Decisão: ler a grade** — a faixa inteira `[−0,3; −0,2)` vale 25%. É o que o
+simulador em uso no NGR-SEE sempre fez (`_converter()` do `BDE-Interface`, uma
+busca binária na tabela de faixas), e manter o simulador web divergindo dele
+produziria 0% onde o sistema em circulação produz 25%, para a mesma escola.
 
-Enquanto isso, o simulador emite um alerta explícito quando a média cai nessa
-faixa, para o gestor não ler 0% como defeito do sistema.
+Uma versão anterior deste repositório reproduzia o buraco. Foi revertido: o
+critério aqui é não divergir do mecanismo já validado e em uso.
+
+**Continua valendo levar o ponto ao Núcleo da SEPLAG** (Zaplag
+(81) 98494-4837, nota 6 da planilha) para que a escada de IFs da planilha seja
+corrigida — enquanto ela existir, a planilha e o simulador darão respostas
+diferentes nessa faixa, e a diferença é de 25 pontos percentuais de bônus.
 
 ### 5.3 A cota de participação não é condicional na planilha
 

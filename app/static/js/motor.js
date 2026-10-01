@@ -1,0 +1,181 @@
+/* ============================================================================
+   Motor BDE — porte de src/bde/service.py para o navegador.
+
+   O Google Sites e hospedagem estatica: nao roda Python, nao roda o FastAPI.
+   Este motor substitui a chamada a /api/v1/simular-bde e devolve exatamente o
+   mesmo formato que a API devolvia, para que o wizard nao precise saber de
+   onde veio o resultado.
+
+   A participacao de 80% no SAEPE e por etapa. Etapa que nao atingiu entra na
+   media com IDEPE zero: a diferenca dela e 0 - meta, pesando pelas
+   matriculas. Nenhuma etapa com matricula fica de fora da conta.
+
+   Cadeia de calculo:
+
+     idepe_i       resultado com 80% de participacao, 0 sem
+     variacao_i    idepe_i - meta, em TODAS as etapas
+     H47           media ponderada das variacoes pelas matriculas
+     H45           conversao da media em percentual de atingimento
+     equidade      +100% se reduziu desigualdade OU esta no terco de
+                   elementares — os dois quesitos nao somam entre si
+     B40           cota resultado:
+                     sem quesito de equidade      idepe inteiro
+                     com quesito e IDEPE < 200%   min(idepe; 1)
+                     com quesito e IDEPE = 200%   idepe inteiro
+     B41           cota alem = idepe - B40, a parte trocada pelo quesito
+     participacao  +50% so se TODAS as etapas atingiram 80%
+     total         min(B40 + equidade + participacao; 3.0)
+
+   O excedente acima de 100% e o quesito de equidade so se acumulam quando a
+   escola chega a 200% de IDEPE (variacao >= 0,4). Ver
+   docs/EXTRACAO_PLANILHA.md secao 5.1.
+
+   Com todas as etapas acima de 80%, o percentual_idepe e identico ao do ciclo
+   anterior: o zero so muda a conta de quem tem etapa sem participacao.
+   ============================================================================ */
+
+var COTA_EQUIDADE = 1.0;
+var COTA_PARTICIPACAO = 0.5;
+var TETO_BDE = 3.0;
+
+// IDEPE a partir do qual o excedente acima de 100% soma com a equidade.
+var IDEPE_ACUMULA_COM_EQUIDADE = 2.0;
+
+// Faixas da validacao de dados da planilha (B6:B8 e B19/B20 etc.).
+var MATRICULAS_MIN = 8;
+var MATRICULAS_MAX = 50000;
+var IDEPE_MIN = 1.5;
+var IDEPE_MAX = 9.2;
+
+var NOMES_ETAPAS = {
+    ai: 'Anos Iniciais',
+    af: 'Anos Finais',
+    em: "Ensino Médio",
+};
+
+/**
+ * ROUND(valor; 4) do Excel — empate vai para longe do zero.
+ *
+ * Math.round sozinho arredonda meio-para-cima (em direcao a +infinito), o que
+ * erra o sinal nos negativos; por isso o calculo roda no valor absoluto. O
+ * toPrecision(12) descarta o residuo binario da subtracao: 4,59995 - 4,5 nao
+ * da 0,09995, da 0,09994999999999976, que cairia na faixa de 100% em vez de
+ * 125%.
+ */
+function arredondarExcel(valor) {
+    var sinal = valor < 0 ? -1 : 1;
+    var escalado = Number((Math.abs(valor) * 1e4).toPrecision(12));
+    return (sinal * Math.round(escalado)) / 1e4;
+}
+
+/**
+ * Formula H45. Recebe a diferenca ja arredondada por arredondarExcel.
+ *
+ * Le a grade de consulta E42:M43 da planilha: cada faixa vale a partir do seu
+ * limite inferior, inclusive. A escada de IFs de H45 devolve 0% para
+ * diferencas estritamente entre -0,3 e -0,2 — um buraco que a propria grade
+ * contradiz, e que o simulador em uso no NGR nunca teve. Ver
+ * docs/EXTRACAO_PLANILHA.md secao 5.2.
+ */
+function converterDiferencaEmPercentual(diferenca) {
+    if (diferenca < -0.3) return 0.00;
+    if (diferenca < -0.2) return 0.25;
+    if (diferenca < -0.1) return 0.50;
+    if (diferenca < 0.0) return 0.75;
+    if (diferenca < 0.1) return 1.00;
+    if (diferenca < 0.2) return 1.25;
+    if (diferenca < 0.3) return 1.50;
+    if (diferenca < 0.4) return 1.75;
+    return 2.00;
+}
+
+/**
+ * Substitui o POST /api/v1/simular-bde. Recebe e devolve os mesmos formatos.
+ *
+ * Cada etapa do payload traz { matriculas, participacao_maior_80 } e, so
+ * quando participou, { meta, resultado }.
+ */
+function simularBde(payload) {
+    var etapas = [];
+    ['ai', 'af', 'em'].forEach(function (chave) {
+        var dados = payload['etapa_' + chave];
+        if (dados) {
+            etapas.push({
+                nome: NOMES_ETAPAS[chave],
+                matriculas: dados.matriculas,
+                participou: !!dados.participacao_maior_80,
+                meta: dados.meta,
+                resultado: dados.resultado,
+            });
+        }
+    });
+
+    if (etapas.length === 0) {
+        throw new Error(
+            'Informe ao menos uma etapa pactuada. Escola sem meta pactuada nao ' +
+            'e elegivel ao BDE.'
+        );
+    }
+
+    // Etapa sem 80% entra com IDEPE zero, e a diferenca dela e 0 - meta.
+    var detalhes = etapas.map(function (e) {
+        var idepe = e.participou ? e.resultado : 0.0;
+        var variacao = arredondarExcel(idepe - e.meta);
+        return {
+            nome: e.nome,
+            matriculas: e.matriculas,
+            participou: e.participou,
+            meta: e.meta,
+            resultado: idepe,
+            variacao: variacao,
+            percentual_atingimento: converterDiferencaEmPercentual(variacao),
+        };
+    });
+
+    // H47 entre todas as etapas, pesando pelas matriculas
+    var matTotal = detalhes.reduce(function (s, d) { return s + d.matriculas; }, 0);
+    var soma = detalhes.reduce(function (s, d) { return s + d.variacao * d.matriculas; }, 0);
+    var mediaVariacao = arredondarExcel(soma / matTotal);
+    var percentualIdepe = converterDiferencaEmPercentual(mediaVariacao);
+
+    // Equidade: um quesito basta e os dois valem o mesmo que um. Vale para
+    // toda escola, tenha ou nao atingido 80% de participacao. Quem
+    // atinge os dois aparece com a cota em equidade.
+    var bonusEquidade = payload.reduziu_desigualdade ? COTA_EQUIDADE : 0.0;
+    var bonusElementares = payload.terco_menor_elementares && !payload.reduziu_desigualdade
+        ? COTA_EQUIDADE : 0.0;
+    var temQuesito = bonusEquidade + bonusElementares > 0.0;
+
+    // B40 / B41. Com quesito de equidade e IDEPE abaixo de 200%, a escola
+    // troca o excedente acima de 100% pelo quesito.
+    var cotaResultado = temQuesito && percentualIdepe < IDEPE_ACUMULA_COM_EQUIDADE
+        ? Math.min(percentualIdepe, 1.0)
+        : percentualIdepe;
+    var cotaAlemResultado = arredondarExcel(percentualIdepe - cotaResultado);
+
+    // Participacao: uma etapa sem 80% ja tira os +50%.
+    var bonusParticipacao = detalhes.every(function (d) { return d.participou; })
+        ? COTA_PARTICIPACAO : 0.0;
+
+    var cotaBdeCalculada = cotaResultado + bonusEquidade + bonusElementares;
+    var percentualBde = arredondarExcel(
+        Math.min(cotaBdeCalculada + bonusParticipacao, TETO_BDE)
+    );
+
+    // Os nomes e a ordem sao os de RespostaBDE em src/bde/schemas.py. A pagina
+    // e a API tem de devolver o mesmo objeto: o wizard nao sabe de onde veio.
+    return {
+        percentual_bde: percentualBde,
+        percentual_formatado: Math.round(percentualBde * 100) + '%',
+        apto_a_receber: percentualBde > 0.0,
+        media_ponderada_variacao: mediaVariacao,
+        percentual_idepe: percentualIdepe,
+        cota_resultado: cotaResultado,
+        cota_alem_resultado: cotaAlemResultado,
+        cota_bde_calculada: cotaBdeCalculada,
+        bonus_equidade: bonusEquidade,
+        bonus_elementares: bonusElementares,
+        bonus_participacao: bonusParticipacao,
+        etapas: detalhes,
+    };
+}

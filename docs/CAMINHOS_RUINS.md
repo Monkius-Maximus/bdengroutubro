@@ -35,11 +35,11 @@ Digitar 4,5 em "resultado" e 4,7 em "meta" inverte o sinal da diferença e pode
 levar de 125% para 75%. Nenhuma validação detecta isso: ambos são IDEPEs
 plausíveis.
 
-*Mitigação:* a tela da etapa em `web/index.html` recalcula a diferença a cada
-tecla e a mostra em palavras ("seu resultado ficou 0,20 ponto(s) abaixo da
-meta"), com fundo verde ou âmbar conforme o sinal. A inversão fica evidente
-antes de avançar — nenhuma validação de faixa a pegaria, porque os dois números
-são IDEPEs plausíveis.
+*Mitigação parcial:* o passo "Resumo das Informações" mostra, por etapa,
+`Meta | Resultado | Variação` com fundo verde ou vermelho, antes de o gestor ver
+o resultado. A inversão fica visível ali — mas só depois de preencher tudo,
+não no momento da digitação. Nenhuma validação de faixa a pegaria, porque os
+dois números são IDEPEs plausíveis.
 
 ### A4. Digitar o IDEPE em escala errada — [Mitigado]
 `45` no lugar de `4,5`, ou a taxa de aprovação (`85`) no lugar do índice.
@@ -50,27 +50,26 @@ são IDEPEs plausíveis.
 O gestor digita `4,7`. Em JSON isso vira a string `"4,7"`, e o Pydantic rejeita
 com uma mensagem em inglês sobre parsing de float.
 
-*Mitigação:* `lerDecimal()` aceita vírgula e converte para `number` na
-fronteira do formulário. O motor só recebe número. O backend continua recusando
-string: seria um segundo caminho para a mesma entrada.
+*Mitigação:* os campos são `<input type="number" step="0.01">`. Em navegador
+com locale pt-BR isso aceita vírgula e entrega ponto para o `parseFloat`, e o
+teclado do celular já abre numérico. O motor só recebe número.
 
 ### A6. Usar matrículas do ano errado — [Mitigado]
 A ponderação é pelas **matrículas de 2025**, não pelas do ano corrente. Uma
 escola que cresceu ou encolheu muda o peso relativo entre etapas e altera a
 faixa final.
 
-*Mitigação:* o campo se chama "Matrículas de 2025" e o texto de ajuda nomeia a
-fonte (Censo Escolar 2025) e desaconselha as matrículas do ano corrente.
+*Mitigação:* o campo se chama "Matrículas 2026", dizendo de que ano é o dado.
 
-### A7. Usar o IDEB no lugar do IDEPE — [Mitigado]
+### A7. Usar o IDEB no lugar do IDEPE — [Aberto]
 A pasta tem duas abas de cálculo com padronizações diferentes (AI: `(LP-49)/275`
 no IDEPE contra as constantes do SAEB no IDEB). Os dois índices têm a mesma
 ordem de grandeza, então o número passa em qualquer validação de faixa e produz
 um resultado errado sem nenhum sinal.
 
-*Mitigação:* cada tela de etapa abre dizendo que os números são do
-**IDEPE/SAEPE** e não do IDEB/SAEB, e por que trocá-los não dispara nenhum
-alarme.
+*Mitigação parcial:* os campos se chamam "Meta IDEPE" e "Resultado IDEPE", o
+que já orienta. Falta o aviso explícito de que **não** é IDEB/SAEB — que é o
+erro que nenhuma validação de faixa detecta.
 
 ### A8. Arredondamento na borda de faixa — [Mitigado]
 `H47` é arredondado a 4 casas. Uma diferença de 0,09999 dá 100%; 0,1 dá 125%.
@@ -93,52 +92,62 @@ em nenhum dígito digitado pelo gestor. Regressão coberta por
 
 ## B. Interpretação da regra
 
-### B1. Assumir que os bônus são cumulativos — [Mitigado]
-A regra declarada diz "independentes e cumulativos". A fórmula `C45` da planilha
-usa `OR`: ter equidade **e** elementares vale o mesmo que ter só um, salvo quando
-o IDEPE é exatamente 200%. Divergem 20 das 28 combinações.
+### B1. Assumir que os quesitos de equidade são cumulativos — [Mitigado]
+No BDE 2027 equidade e elementares **não somam**: atingir um ou os dois vale
++100% uma vez só. Uma versão anterior deste simulador somava os dois (+200%);
+foi revertido pela seção 6 da regra.
 
-*Mitigação:* decidido reproduzir a planilha, por ser mecanismo já validado e em
-uso. `calcular_cota_bde()` implementa `C45` na forma reduzida de 3 ramos,
-equivalente à literal de 4 (o 3º ramo é inalcançável **e** redundante).
-Conferido nas 36 combinações da tabela-verdade de `EXTRACAO_PLANILHA.md` §6.
+*Mitigação:* `EXTRACAO_PLANILHA.md` §5.1 registra a regra.
+`tests/test_cenarios.py` trava os cenários B e D, que são exatamente esse caso.
 
 ### B2. Esperar que desempenho acima da meta sempre aumente a cota — [Mitigado]
-Em `C45`, `B41` (cota além do resultado) é descartada no caminho normal. Sem
-bônus, 200% de IDEPE rende exatamente o mesmo que 100%. É o caminho mais
-provável de contestação: a escola que mais superou a meta não vê diferença.
+No BDE 2027, sem quesito de equidade o IDEPE conta inteiro, até 200%. Com
+quesito, o excedente acima de 100% só soma se a escola chegar a 200% de IDEPE
+(variação ≥ 0,4); entre 100% e 200% a escola troca o excedente pelo quesito e
+fica em 200%. É o caminho mais provável de contestação: com quesito, 125% e
+175% de IDEPE rendem o mesmo.
 
-*Mitigação:* a `memoria_calculo` diz explicitamente que a cota além do resultado
-não entrou no total e por quê, e os `alertas` avisam quando a cota de resultado
-já está no teto. O número continua o da planilha; o que muda é o gestor saber
-disso antes de contestar.
+*Mitigação:* `cota_alem_resultado` expõe a parte trocada pelo quesito e o popup
+da "Cota Resultado" explica a troca em palavras.
 
-### B2b. Prometer valores intermediários entre 250% e 300% — [Mitigado]
-`C45` produz apenas 10 cotas distintas, e o salto de 250% para 300% não tem
-nenhum degrau no meio. Um frontend com barra de progresso contínua, ou um texto
-do tipo "faltam 20% para o teto", inventa uma granularidade que a regra não tem.
+### B2b. Prometer valores intermediários que a regra não produz — [Mitigado]
+A regra produz um conjunto pequeno de valores distintos, e um texto do tipo
+"faltam 20% para o teto" inventa uma granularidade que não existe. No BDE 2027
+há um platô novo: a soma é travada em 300%, então combinações diferentes exibem
+o mesmo 300% — IDEPE de 100% com os dois quesitos e participação dá 350% antes
+do teto, e o gestor não vê diferença se melhorar.
 
 *Mitigação:* os `alertas` dizem a condição exata e completa do teto (IDEPE de
-200% + as duas metas de equidade + participação), em vez de uma distância. A
-barra de progresso de `web/index.html` mede **etapas do formulário** ("Etapa 3
-de 6"), nunca proximidade do teto — são coisas diferentes e a rotulagem
-explicita qual delas está na tela.
+200% + um quesito de equidade), em vez de uma distância. A
+barra de progresso mede **passos do formulário** ("Passo 3 de 8"), nunca
+proximidade do teto — são coisas diferentes e a rotulagem explicita qual delas
+está na tela.
 
 ### B2c. Orientar a escola a "superar mais a meta" — [Mitigado]
-Conselho intuitivo e quase sempre inútil: entre 100% e 200% de IDEPE a cota não
-muda, salvo se a escola também tiver as duas metas de equidade. Uma escola em
-125% ganha muito mais perseguindo a meta de equidade (+100 pontos) do que
-subindo o IDEPE.
+Com um quesito de equidade, subir o IDEPE entre 100% e 175% não muda nada: a
+escola já está em 200% pela troca. Só chegar a 200% de IDEPE soma de novo. Uma
+escola em 125% sem quesito ganha mais perseguindo um quesito (+75 pontos) do
+que subindo o IDEPE uma faixa (+25).
 
-*Mitigação:* quando a cota de resultado está no teto, os `alertas` dizem isso e
-apontam onde o ganho ainda existe.
+*Mitigação:* o popup da "Cota Resultado" explica a troca.
 
-### B3. Tratar a participação como eliminatória — [Mitigado]
-"Gatilho de participação" sugere que abaixo de 80% a escola perde tudo. Não é o
-caso: é uma **cota parcial adicional** que soma 50% ao resultado.
+### B3. Tratar a participação como só um bônus — [Invertido no BDE 2027]
+Até o BDE 2026 a participação era apenas uma cota adicional de 50%, e o
+caminho ruim era chamá-la de eliminatória. **No BDE 2027 ela é as duas
+coisas**, e por etapa:
 
-*Mitigação:* o campo se chama `participacao_minima_atingida` e aparece na saída
-como `cota_participacao`, somando — nunca multiplicando ou zerando.
+- **IDEPE zero:** etapa sem 80% entra na média com IDEPE zero; a diferença
+  dela (`0 − meta`) pesa pelas matrículas e costuma zerar o IDEPE da escola.
+- **Bônus:** os +50% só entram se **todas** as etapas atingirem os 80%.
+
+*O caminho ruim agora é dizer que a escola "perde tudo" sem participação.* Ela
+não perde: os quesitos de equidade continuam valendo, e uma escola sem nenhuma
+participação ainda chega a 100% com um quesito. Só chega a 0% quem não
+atinge nem participação nem equidade.
+
+*Mitigação:* `participacao_maior_80` é campo de `EtapaIDEPE`, não da requisição.
+A meta é obrigatória em toda etapa, e um `model_validator` recusa resultado em
+etapa que não participou — o zero entra pelo cálculo, nunca digitado à mão.
 
 ### B4. Fixar 50% como o valor eterno da cota de participação — [Mitigado]
 No ciclo BDE 2025 (resultados de 2024) essa cota foi de **25%**. O percentual
@@ -250,17 +259,32 @@ os erros de borda.
 *Mitigação recomendada:* a planilha é **especificação**, não dependência. As
 regras foram transcritas para código e auditadas em `EXTRACAO_PLANILHA.md`.
 
+### C9. Renomear campos do schema sem o frontend no repositório — [Mitigado]
+O commit que realinhou os schemas trocou `bonus_equidade` por `cota_equidade`,
+`participacao_maior_80` por `participacao_minima_atingida`, `etapa_ai` por
+`etapa_anos_iniciais` e `variacao` por `diferenca`. O frontend vivia em outro
+lugar e não acompanhou: passou a mandar um payload que o backend recusa com 422
+e a ler campos que voltam `undefined`, exibindo `NaN%` nos cartões.
+
+*Mitigação:* a interface passou a morar no mesmo repositório, e
+`tests/test_paridade.py` compara os dois motores campo a campo — um rename só
+de um lado agora reprova o teste em vez de aparecer na tela do gestor.
+
 ---
 
 ## Resumo dos itens que exigem ação
 
 | # | Item | Estado |
 |---|---|---|
-| B1 | `OR` vs. bônus cumulativos em `C45` | Decidido: reproduzir a planilha |
+| B1 | Equidade cumulativa (+100% por quesito) | BDE 2027: soma; diverge da planilha de propósito |
+| B3 | Participação por etapa, como portão do IDEPE | BDE 2027: implementado |
 | B2 | Cota além do resultado descartada | Decidido: reproduzir, com aviso ao gestor |
-| A8 | Buraco da faixa (−0,3; −0,2) em `H45` | Decidido: reproduzir, com alerta explícito |
-| — | Confirmar o buraco da faixa com o Núcleo da SEPLAG | **Aberto — fora do código** |
+| A8 | Buraco da faixa (−0,3; −0,2) em `H45` | Decidido: ler a grade (25%), como o sistema em uso |
+| — | Levar o buraco da faixa ao Núcleo da SEPLAG | **Aberto — fora do código** |
 | B4 | Cota de participação fixada em 50% | Mitigado: constante nomeada por ciclo |
 | C3 | CORS liberado | Aberto, antes de produção |
 | C7 | Tabela de conversão duplicada no frontend | Decidido: duplicar, com teste de paridade |
+| C9 | Rename de schema sem o frontend junto | Mitigado: frontend no repo + paridade |
+| A6 | Rótulo não diz de que ano são as matrículas | Mitigado: "Matrículas 2026" |
+| A7 | Falta aviso explícito de IDEPE ≠ IDEB | Aberto |
 | A8 | Resíduo de ponto flutuante antes do `ROUND` | Corrigido em `arredondar_excel()` |

@@ -1,11 +1,15 @@
 """
 Paridade entre o motor Python (src/bde/service.py) e o motor JavaScript
-embarcado em web/index.html.
+embarcado em index.html.
 
-Os dois motores existem porque o Google Sites não hospeda backend: a página é
-estática e calcula no navegador. Duas implementações da mesma fórmula divergem
-sozinhas com o tempo — este teste é o que impede isso. Ele varre os limites de
-faixa de H45, onde 0,0001 vale 25 pontos percentuais.
+Os dois existem porque o Google Sites nao hospeda backend: a pagina publicada
+e estatica e calcula no navegador, enquanto o FastAPI continua servindo a
+mesma regra como API. Duas implementacoes divergem sozinhas com o tempo — este
+teste e o que impede isso.
+
+Foi exatamente esse tipo de desencontro que ja quebrou o simulador uma vez: os
+schemas foram renomeados de um lado so, o payload passou a ser recusado com 422
+e os cartoes do resultado passaram a exibir NaN%.
 
     python3 tests/test_paridade.py
 """
@@ -27,10 +31,10 @@ sys.path.insert(0, str(RAIZ))
 from src.bde.schemas import EtapaIDEPE, RequisicaoBDE  # noqa: E402
 from src.bde.service import calcular_bde  # noqa: E402
 
-PAGINA = RAIZ / "web" / "index.html"
+PAGINA = RAIZ / "index.html"
 
-# O motor JS termina onde começa o wizard; daí para baixo o código toca o DOM.
-MARCA_FIM_DO_MOTOR = "WIZARD"
+# O motor JS termina onde comeca o wizard; dai para baixo o codigo toca o DOM.
+MARCA_FIM_DO_MOTOR = "Wizard BDE"
 
 
 def extrair_motor_js() -> str:
@@ -42,43 +46,43 @@ def extrair_motor_js() -> str:
     corte = corpo.find(MARCA_FIM_DO_MOTOR)
     if corte == -1:
         raise RuntimeError(
-            f"Marcador {MARCA_FIM_DO_MOTOR!r} sumiu de {PAGINA}: o teste não "
+            f"Marcador {MARCA_FIM_DO_MOTOR!r} sumiu de {PAGINA}: o teste nao "
             "consegue mais separar o motor do wizard."
         )
     return corpo[: corpo.rfind("/* =", 0, corte)]
 
 
-def normalizar(texto: str) -> str:
-    """Tira da comparação o que é só apresentação: vírgula decimal e sinal −."""
-    return texto.replace(",", ".").replace("−", "-")
-
-
 def resposta_python(caso: dict) -> dict:
-    requisicao = RequisicaoBDE(
-        etapa_anos_iniciais=(
-            EtapaIDEPE(**caso["anos_iniciais"]) if "anos_iniciais" in caso else None
-        ),
-        etapa_anos_finais=(
-            EtapaIDEPE(**caso["anos_finais"]) if "anos_finais" in caso else None
-        ),
-        etapa_ensino_medio=(
-            EtapaIDEPE(**caso["ensino_medio"]) if "ensino_medio" in caso else None
-        ),
-        reduziu_desigualdade=caso["reduziu_desigualdade"],
-        terco_menor_elementares=caso["terco_menor_elementares"],
-        participacao_minima_atingida=caso["participacao_minima_atingida"],
+    r = calcular_bde(
+        RequisicaoBDE(
+            etapa_ai=EtapaIDEPE(**caso["etapa_ai"]) if "etapa_ai" in caso else None,
+            etapa_af=EtapaIDEPE(**caso["etapa_af"]) if "etapa_af" in caso else None,
+            etapa_em=EtapaIDEPE(**caso["etapa_em"]) if "etapa_em" in caso else None,
+            reduziu_desigualdade=caso["reduziu_desigualdade"],
+            terco_menor_elementares=caso["terco_menor_elementares"],
+        )
     )
-    r = calcular_bde(requisicao)
     return {
         "percentual_bde": r.percentual_bde,
-        "media": r.media_ponderada_diferenca,
-        "idepe": r.percentual_idepe,
+        "percentual_formatado": r.percentual_formatado,
+        "apto_a_receber": r.apto_a_receber,
+        "media": r.media_ponderada_variacao,
+        "percentual_idepe": r.percentual_idepe,
         "cota_resultado": r.cota_resultado,
-        "cota_alem": r.cota_alem_resultado,
-        "cota_equidade": r.cota_equidade,
-        "cota_elementares": r.cota_elementares,
-        "cota_participacao": r.cota_participacao,
-        "alertas": [normalizar(a) for a in r.alertas],
+        "cota_alem_resultado": r.cota_alem_resultado,
+        "cota_bde_calculada": r.cota_bde_calculada,
+        "bonus_equidade": r.bonus_equidade,
+        "bonus_elementares": r.bonus_elementares,
+        "bonus_participacao": r.bonus_participacao,
+        "etapas": [
+            {
+                "nome": e.nome,
+                "participou": e.participou,
+                "variacao": e.variacao,
+                "percentual_atingimento": e.percentual_atingimento,
+            }
+            for e in r.etapas
+        ],
     }
 
 
@@ -86,41 +90,33 @@ def respostas_js(casos: list[dict]) -> list[dict]:
     runner = f"""
 {extrair_motor_js()}
 
-const NOMES = {{
-  anos_iniciais: "Anos Iniciais",
-  anos_finais: "Anos Finais",
-  ensino_medio: "Ensino Médio",
-}};
-
 const casos = JSON.parse(require("fs").readFileSync(process.env.CASOS_JSON, "utf8"));
-const saida = casos.map((caso) => {{
-  const etapas = Object.keys(NOMES)
-    .filter((id) => caso[id])
-    .map((id) => Object.assign({{ etapa: id, nome: NOMES[id] }}, caso[id]));
-
-  const r = calcularBde({{
-    etapas: etapas,
-    reduziuDesigualdade: caso.reduziu_desigualdade,
-    tercoMenorElementares: caso.terco_menor_elementares,
-    participacaoMinimaAtingida: caso.participacao_minima_atingida,
-  }});
-
+process.stdout.write(JSON.stringify(casos.map((caso) => {{
+  const r = simularBde(caso);
   return {{
-    percentual_bde: r.percentualBde,
-    media: r.mediaPonderadaDiferenca,
-    idepe: r.percentualIdepe,
-    cota_resultado: r.cotaResultado,
-    cota_alem: r.cotaAlemResultado,
-    cota_equidade: r.cotaEquidade,
-    cota_elementares: r.cotaElementares,
-    cota_participacao: r.cotaParticipacao,
-    alertas: r.alertas.map((a) => a.replace(/,/g, ".").replace(/−/g, "-")),
+    percentual_bde: r.percentual_bde,
+    percentual_formatado: r.percentual_formatado,
+    apto_a_receber: r.apto_a_receber,
+    media: r.media_ponderada_variacao,
+    percentual_idepe: r.percentual_idepe,
+    cota_resultado: r.cota_resultado,
+    cota_alem_resultado: r.cota_alem_resultado,
+    cota_bde_calculada: r.cota_bde_calculada,
+    bonus_equidade: r.bonus_equidade,
+    bonus_elementares: r.bonus_elementares,
+    bonus_participacao: r.bonus_participacao,
+    etapas: r.etapas.map((e) => ({{
+      nome: e.nome,
+      participou: e.participou,
+      variacao: e.variacao,
+      percentual_atingimento: e.percentual_atingimento,
+    }})),
   }};
-}});
-
-process.stdout.write(JSON.stringify(saida));
+}})));
 """
-    with tempfile.NamedTemporaryFile("w", suffix=".json", encoding="utf-8", delete=False) as arquivo:
+    with tempfile.NamedTemporaryFile(
+        "w", suffix=".json", encoding="utf-8", delete=False
+    ) as arquivo:
         json.dump(casos, arquivo)
         entrada = arquivo.name
 
@@ -135,39 +131,75 @@ process.stdout.write(JSON.stringify(saida));
     return json.loads(processo.stdout)
 
 
+def _etapa(matriculas: int, participou: bool, meta: float, resultado=None) -> dict:
+    dados = {"matriculas": matriculas, "participacao_maior_80": participou, "meta": meta}
+    if participou:
+        dados["resultado"] = resultado
+    return dados
+
+
 def gerar_casos() -> list[dict]:
     """
-    Metas e resultados escolhidos para pousar em cima dos limites de H45 e a
-    um passo deles, onde o arredondamento decide a faixa.
-    """
-    meta = 4.5
-    resultados = [
-        4.19, 4.2, 4.2001, 4.25, 4.29, 4.2999, 4.3, 4.3001,  # o buraco de −0,3 a −0,2
-        4.35, 4.4, 4.4999, 4.5, 4.5999, 4.6, 4.69999, 4.7,
-        4.79999, 4.8, 4.89999, 4.9, 5.2, 6.0, 9.2,
-        4.59995, 4.49995,  # empates de ROUND(...; 4)
-    ]
-    booleanos = list(product([True, False], repeat=3))
+    Resultados escolhidos para pousar em cima dos limites da tabela de conversao
+    e a um passo deles, onde 0,01 na media ponderada vale 25 pontos percentuais.
 
+    As familias cobrem os quatro caminhos da regra do BDE 2027: todas as
+    etapas aprovadas, todas reprovadas, e as duas misturas — aprovada grande com
+    reprovada pequena e o inverso, que e onde a diluicao mais pesa.
+    """
+    resultados = [
+        1.5, 4.19, 4.2, 4.21, 4.25, 4.29, 4.3, 4.31, 4.35, 4.4, 4.49,
+        4.5, 4.59, 4.6, 4.69, 4.7, 4.79, 4.8, 4.89, 4.9, 5.2, 6.0, 9.2,
+    ]
     casos = []
-    for resultado, (equidade, elementares, participacao) in product(resultados, booleanos):
+    for resultado, (equidade, elementares) in product(
+        resultados, product([True, False], repeat=2)
+    ):
         comuns = {
             "reduziu_desigualdade": equidade,
             "terco_menor_elementares": elementares,
-            "participacao_minima_atingida": participacao,
         }
-        # Etapa única.
-        casos.append(
-            {"anos_iniciais": {"matriculas": 320, "meta": meta, "resultado": resultado}, **comuns}
-        )
-        # Três etapas com pesos desiguais — exercita a ponderação crua de H47.
+        # Etapa unica aprovada, em duas posicoes do payload.
+        casos.append({"etapa_ai": _etapa(320, True, 4.5, resultado), **comuns})
+        casos.append({"etapa_af": _etapa(91, True, 5.1, resultado), **comuns})
+        # Etapa unica reprovada — o caminho que so concorre a equidade.
+        casos.append({"etapa_ai": _etapa(320, False, 4.5), **comuns})
+        # Misturas: o peso da reprovada muda tudo.
         casos.append(
             {
-                "anos_iniciais": {"matriculas": 317, "meta": meta, "resultado": resultado},
-                "anos_finais": {"matriculas": 83, "meta": 5.1, "resultado": 5.0},
-                "ensino_medio": {"matriculas": 1234, "meta": 3.8, "resultado": 4.05},
+                "etapa_ai": _etapa(1000, True, 4.5, resultado),
+                "etapa_em": _etapa(50, False, 3.8),
                 **comuns,
             }
+        )
+        casos.append(
+            {
+                "etapa_ai": _etapa(50, True, 4.5, resultado),
+                "etapa_em": _etapa(1000, False, 3.8),
+                **comuns,
+            }
+        )
+        # Tres etapas aprovadas — regressao do ciclo anterior.
+        casos.append(
+            {
+                "etapa_ai": _etapa(317, True, 4.5, resultado),
+                "etapa_af": _etapa(83, True, 5.1, 5.0),
+                "etapa_em": _etapa(1234, True, 3.8, 4.05),
+                **comuns,
+            }
+        )
+        # Tres etapas com a do meio reprovada.
+        casos.append(
+            {
+                "etapa_ai": _etapa(317, True, 4.5, resultado),
+                "etapa_af": _etapa(83, False, 5.1),
+                "etapa_em": _etapa(1234, True, 3.8, 4.05),
+                **comuns,
+            }
+        )
+        # Todas reprovadas.
+        casos.append(
+            {"etapa_ai": _etapa(317, False, 4.5), "etapa_af": _etapa(83, False, 5.1), **comuns}
         )
     return casos
 
@@ -184,7 +216,7 @@ def main() -> int:
     ]
 
     for caso, esperado, obtido in divergencias[:5]:
-        print("DIVERGÊNCIA")
+        print("DIVERGENCIA")
         print("  caso:   ", json.dumps(caso, ensure_ascii=False))
         print("  python: ", json.dumps(esperado, ensure_ascii=False))
         print("  js:     ", json.dumps(obtido, ensure_ascii=False))
@@ -194,7 +226,7 @@ def main() -> int:
         print(f"FALHOU — {len(divergencias)} de {len(casos)} casos divergiram.")
         return 1
 
-    print(f"OK — {len(casos)} casos, motores idênticos.")
+    print(f"OK — {len(casos)} casos, motores identicos.")
     return 0
 
 

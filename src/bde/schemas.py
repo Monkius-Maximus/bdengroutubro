@@ -35,15 +35,21 @@ from pydantic import BaseModel, Field, model_validator
 class EtapaIDEPE(BaseModel):
     """
     Dados de uma etapa letiva para cálculo do IDEPE.
-    Cada etapa possui matrículas (peso), meta pactuada e resultado obtido.
+
+    Toda etapa com matrícula entra na média. A que não atingiu 80% de
+    participação entra com IDEPE zero: tem meta, mas não tem resultado.
     """
 
     matriculas: int = Field(
         ...,
         gt=0,
+        description="Quantidade de matrículas na etapa. Peso na média ponderada.",
+    )
+    participacao_maior_80: bool = Field(
+        ...,
         description=(
-            "Quantidade de matrículas na etapa. "
-            "Usado como peso no cálculo da média ponderada."
+            "A etapa atingiu participação igual ou superior a 80% em todos os "
+            "componentes avaliados no SAEPE? (SIM / NÃO)"
         ),
     )
     meta: float = Field(
@@ -51,11 +57,28 @@ class EtapaIDEPE(BaseModel):
         gt=0,
         description="Meta IDEPE pactuada para a etapa (ex: 4.50).",
     )
-    resultado: float = Field(
-        ...,
+    resultado: Optional[float] = Field(
+        None,
         gt=0,
-        description="Resultado IDEPE obtido pela escola (ex: 4.70).",
+        description=(
+            "Resultado IDEPE obtido pela escola (ex: 4.70). Só existe quando a "
+            "etapa atingiu 80% de participação; sem isso o IDEPE é zero."
+        ),
     )
+
+    @model_validator(mode="after")
+    def _resultado_segue_a_participacao(self):
+        if self.participacao_maior_80 and self.resultado is None:
+            raise ValueError(
+                "Etapa com participação igual ou superior a 80% exige o "
+                "resultado IDEPE."
+            )
+        if not self.participacao_maior_80 and self.resultado is not None:
+            raise ValueError(
+                "Etapa sem 80% de participação entra com IDEPE zero: informe "
+                "matrículas e meta, sem resultado."
+            )
+        return self
 
 
 # ---------------------------------------------------------------------------
@@ -86,9 +109,9 @@ class RequisicaoBDE(BaseModel):
     reduziu_desigualdade: bool = Field(
         ...,
         description=(
-            "Houve evolução, no SAEPE 2025, dos estudantes "
+            "Houve evolução, no SAEPE 2026, dos estudantes "
             "Pretos, Pardos e Indígenas (PPI) e daqueles de "
-            "nível socioeconômico mais baixo, em comparação com 2024? "
+            "nível socioeconômico mais baixo, em comparação com 2025? "
             "(SIM / NÃO)"
         ),
     )
@@ -100,19 +123,11 @@ class RequisicaoBDE(BaseModel):
             "Na Macrorregião, comparando com escolas do mesmo tipo, "
             "sua escola está entre o 1º terço (33,3%) com menor "
             "percentual de estudantes nos níveis elementares (PD 1 e 2) "
-            "no SAEPE 2025? (SIM / NÃO)"
+            "no SAEPE 2026? (SIM / NÃO)"
         ),
     )
 
-    # ---- Participação ----
-    participacao_maior_80: bool = Field(
-        ...,
-        description=(
-            "A escola atingiu participação igual ou superior a 80% "
-            "em TODOS os componentes e etapas avaliados no SAEPE 2026? "
-            "(SIM / NÃO)"
-        ),
-    )
+    # A participação saiu daqui: virou campo de cada EtapaIDEPE.
 
     @model_validator(mode="after")
     def _pelo_menos_uma_etapa(self):
@@ -133,15 +148,20 @@ class DetalheEtapa(BaseModel):
 
     nome: str = Field(description="Nome da etapa (ex: 'Anos Iniciais').")
     matriculas: int = Field(description="Matrículas da etapa.")
+    participou: bool = Field(
+        description="A etapa atingiu 80% de participação no SAEPE."
+    )
     meta: float = Field(description="Meta IDEPE da etapa.")
-    resultado: float = Field(description="Resultado IDEPE da etapa.")
+    resultado: float = Field(
+        description="IDEPE considerado: o resultado, ou zero sem 80% de participação."
+    )
     variacao: float = Field(
-        description="Variacao = Resultado − Meta (pode ser negativa)."
+        description="Variação = IDEPE considerado − Meta (pode ser negativa)."
     )
     percentual_atingimento: float = Field(
         description=(
-            "Percentual de atingimento da meta, convertido pela "
-            "tabela IDEPE (0.0 a 2.0, ou 0% a 200%)."
+            "Percentual de atingimento da meta, convertido pela tabela IDEPE "
+            "(0.0 a 2.0)."
         )
     )
 
@@ -169,7 +189,8 @@ class RespostaBDE(BaseModel):
     media_ponderada_variacao: float = Field(
         description=(
             "Média ponderada das variações (Resultado − Meta) "
-            "entre todas as etapas avaliadas, ponderada pelas matrículas."
+            "de todas as etapas, ponderada pelas matrículas. Etapa sem 80% de "
+            "participação entra com IDEPE zero."
         ),
     )
 
@@ -183,27 +204,38 @@ class RespostaBDE(BaseModel):
 
     # ---- Bônus independentes ----
     bonus_equidade: float = Field(
-        description="Bônus por redução de desigualdades PPI/Renda (0 ou 1.0)."
+        description=(
+            "Bônus por redução de desigualdades PPI/Renda (0 ou 1.0). Não soma "
+            "com o de elementares: quem atinge os dois recebe só este."
+        ),
     )
     bonus_elementares: float = Field(
-        description="Bônus por estar no 1º terço de elementares (0 ou 1.0)."
+        description=(
+            "Bônus por estar no 1º terço de elementares (0 ou 1.0). Zero "
+            "quando a escola já recebe o de equidade."
+        ),
     )
     bonus_participacao: float = Field(
-        description="Bônus por participação ≥ 80% (0 ou 0.5)."
+        description="Bônus por participação ≥ 80% em TODAS as etapas (0 ou 0.5)."
     )
 
     # ---- Cotas intermediárias (transparência do cálculo) ----
     cota_resultado: float = Field(
-        description="Cota base derivada do percentual IDEPE (máx. 1.0)."
+        description=(
+            "Parte do percentual IDEPE que entra na soma. Com quesito de "
+            "equidade e IDEPE abaixo de 200%, limitada a 1.0."
+        ),
     )
     cota_alem_resultado: float = Field(
-        description="Parcela do percentual IDEPE que ultrapassa 100% (0 a 1.0)."
+        description=(
+            "Parte do percentual IDEPE trocada pelo quesito de equidade "
+            "(0 a 1.0)."
+        ),
     )
     cota_bde_calculada: float = Field(
         description=(
-            "Cota do BDE calculada = "
-            "min(IDEPE + equidade + elementares, 2.5). "
-            "A participação é somada depois."
+            "Cota do BDE calculada = cota resultado + equidade + elementares. "
+            "A participação é somada depois, com teto de 3.0."
         ),
     )
 
