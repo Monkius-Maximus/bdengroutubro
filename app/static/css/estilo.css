@@ -25,13 +25,13 @@
     --raio: 12px;
     --overlay: rgba(15, 23, 42, 0.45);
 
-    /* Uma cor por etapa, usada so no nome da etapa, em todas as telas.
-       Escolhidas para nao se confundirem entre si (inclusive com daltonismo)
-       nem com o azul da marca e as cores de status; contraste >= 4,9:1 em todos
-       os fundos onde aparecem. */
-    --etapa-ai: #6d28d9;
-    --etapa-af: #be185d;
-    --etapa-em: #3f6212;
+    /* Uma cor por etapa, usada so no nome da etapa, em todas as telas: roxo,
+       petroleo e castanho. Fora dos tons de vermelho e verde, que o sistema usa
+       para certo/errado e positivo/negativo; distintas entre si inclusive com
+       daltonismo; contraste >= 5,7:1 em todos os fundos onde aparecem. */
+    --etapa-ai: #7e22ce;
+    --etapa-af: #155e75;
+    --etapa-em: #78350f;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

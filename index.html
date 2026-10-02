@@ -33,13 +33,13 @@
     --raio: 12px;
     --overlay: rgba(15, 23, 42, 0.45);
 
-    /* Uma cor por etapa, usada so no nome da etapa, em todas as telas.
-       Escolhidas para nao se confundirem entre si (inclusive com daltonismo)
-       nem com o azul da marca e as cores de status; contraste >= 4,9:1 em todos
-       os fundos onde aparecem. */
-    --etapa-ai: #6d28d9;
-    --etapa-af: #be185d;
-    --etapa-em: #3f6212;
+    /* Uma cor por etapa, usada so no nome da etapa, em todas as telas: roxo,
+       petroleo e castanho. Fora dos tons de vermelho e verde, que o sistema usa
+       para certo/errado e positivo/negativo; distintas entre si inclusive com
+       daltonismo; contraste >= 5,7:1 em todos os fundos onde aparecem. */
+    --etapa-ai: #7e22ce;
+    --etapa-af: #155e75;
+    --etapa-em: #78350f;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -803,12 +803,12 @@ body {
                 <p class="pergunta-instrucao">Preencha as matrículas e a meta e responda sobre a participação. Todos os campos são obrigatórios.</p>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label for="inp-ai-mat">Matrículas 2026</label>
+                        <label for="inp-ai-mat">Matrículas 2026 dos <span class="etapa-nome etapa-ai">Anos Iniciais</span></label>
                         <input type="number" id="inp-ai-mat" inputmode="numeric" placeholder="Ex: 120" min="10" max="300000" step="1" aria-describedby="dica-ai-mat">
                         <p class="dica-campo" id="dica-ai-mat">Total de alunos matriculados na etapa em 2026. Número inteiro de 10 a 300.000.</p>
                     </div>
                     <div class="input-campo">
-                        <label for="inp-ai-meta">Meta IDEPE 2026</label>
+                        <label for="inp-ai-meta">Meta IDEPE 2026 dos <span class="etapa-nome etapa-ai">Anos Iniciais</span></label>
                         <input type="number" id="inp-ai-meta" inputmode="decimal" placeholder="Ex: 4.50" min="2" max="6" step="0.01" aria-describedby="dica-ai-meta">
                         <p class="dica-campo" id="dica-ai-meta">Meta pactuada no Termo de Compromisso. De 2,00 a 6,00, com até duas casas decimais.</p>
                     </div>
@@ -824,7 +824,7 @@ body {
 
                 <div class="input-grupo" id="idepe-ai" style="display:none">
                     <div class="input-campo">
-                        <label for="inp-ai-res">Resultado IDEPE 2026</label>
+                        <label for="inp-ai-res">Resultado IDEPE 2026 dos <span class="etapa-nome etapa-ai">Anos Iniciais</span></label>
                         <input type="number" id="inp-ai-res" inputmode="decimal" placeholder="Ex: 4.70" min="0" max="10" step="0.01" aria-describedby="dica-ai-res">
                         <p class="dica-campo" id="dica-ai-res">IDEPE obtido pela escola na etapa. De 0,00 a 10,00, com até duas casas decimais.</p>
                     </div>
@@ -841,12 +841,12 @@ body {
                 <p class="pergunta-instrucao">Preencha as matrículas e a meta e responda sobre a participação. Todos os campos são obrigatórios.</p>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label for="inp-af-mat">Matrículas 2026</label>
+                        <label for="inp-af-mat">Matrículas 2026 dos <span class="etapa-nome etapa-af">Anos Finais</span></label>
                         <input type="number" id="inp-af-mat" inputmode="numeric" placeholder="Ex: 200" min="10" max="300000" step="1" aria-describedby="dica-af-mat">
                         <p class="dica-campo" id="dica-af-mat">Total de alunos matriculados na etapa em 2026. Número inteiro de 10 a 300.000.</p>
                     </div>
                     <div class="input-campo">
-                        <label for="inp-af-meta">Meta IDEPE 2026</label>
+                        <label for="inp-af-meta">Meta IDEPE 2026 dos <span class="etapa-nome etapa-af">Anos Finais</span></label>
                         <input type="number" id="inp-af-meta" inputmode="decimal" placeholder="Ex: 4.50" min="2" max="6" step="0.01" aria-describedby="dica-af-meta">
                         <p class="dica-campo" id="dica-af-meta">Meta pactuada no Termo de Compromisso. De 2,00 a 6,00, com até duas casas decimais.</p>
                     </div>
@@ -862,7 +862,7 @@ body {
 
                 <div class="input-grupo" id="idepe-af" style="display:none">
                     <div class="input-campo">
-                        <label for="inp-af-res">Resultado IDEPE 2026</label>
+                        <label for="inp-af-res">Resultado IDEPE 2026 dos <span class="etapa-nome etapa-af">Anos Finais</span></label>
                         <input type="number" id="inp-af-res" inputmode="decimal" placeholder="Ex: 4.45" min="0" max="10" step="0.01" aria-describedby="dica-af-res">
                         <p class="dica-campo" id="dica-af-res">IDEPE obtido pela escola na etapa. De 0,00 a 10,00, com até duas casas decimais.</p>
                     </div>
@@ -879,12 +879,12 @@ body {
                 <p class="pergunta-instrucao">Preencha as matrículas e a meta e responda sobre a participação. Todos os campos são obrigatórios.</p>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label for="inp-em-mat">Matrículas 2026</label>
+                        <label for="inp-em-mat">Matrículas 2026 do <span class="etapa-nome etapa-em">Ensino Médio</span></label>
                         <input type="number" id="inp-em-mat" inputmode="numeric" placeholder="Ex: 300" min="10" max="300000" step="1" aria-describedby="dica-em-mat">
                         <p class="dica-campo" id="dica-em-mat">Total de alunos matriculados na etapa em 2026. Número inteiro de 10 a 300.000.</p>
                     </div>
                     <div class="input-campo">
-                        <label for="inp-em-meta">Meta IDEPE 2026</label>
+                        <label for="inp-em-meta">Meta IDEPE 2026 do <span class="etapa-nome etapa-em">Ensino Médio</span></label>
                         <input type="number" id="inp-em-meta" inputmode="decimal" placeholder="Ex: 5.00" min="2" max="6" step="0.01" aria-describedby="dica-em-meta">
                         <p class="dica-campo" id="dica-em-meta">Meta pactuada no Termo de Compromisso. De 2,00 a 6,00, com até duas casas decimais.</p>
                     </div>
@@ -900,7 +900,7 @@ body {
 
                 <div class="input-grupo" id="idepe-em" style="display:none">
                     <div class="input-campo">
-                        <label for="inp-em-res">Resultado IDEPE 2026</label>
+                        <label for="inp-em-res">Resultado IDEPE 2026 do <span class="etapa-nome etapa-em">Ensino Médio</span></label>
                         <input type="number" id="inp-em-res" inputmode="decimal" placeholder="Ex: 5.10" min="0" max="10" step="0.01" aria-describedby="dica-em-res">
                         <p class="dica-campo" id="dica-em-res">IDEPE obtido pela escola na etapa. De 0,00 a 10,00, com até duas casas decimais.</p>
                     </div>
