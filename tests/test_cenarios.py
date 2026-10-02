@@ -35,7 +35,7 @@ CENARIOS = [
         "A",
         "1 etapa, sem 80%, sem equidade — pior caso possivel",
         RequisicaoBDE(
-            etapa_ai=etapa(300, False),
+            etapa_ai=etapa(300, False, meta=4.50),
             reduziu_desigualdade=False,
             terco_menor_elementares=False,
         ),
@@ -46,7 +46,7 @@ CENARIOS = [
         "B",
         "1 etapa, sem 80%, os dois quesitos — quesitos nao somam",
         RequisicaoBDE(
-            etapa_ai=etapa(300, False),
+            etapa_ai=etapa(300, False, meta=4.50),
             reduziu_desigualdade=True,
             terco_menor_elementares=True,
         ),
@@ -77,15 +77,15 @@ CENARIOS = [
     ),
     (
         "E",
-        "AI 300 com 80% (+0,40), EM 100 sem 80%, 1 quesito — diluicao, sem +50%",
+        "AI 300 com 80% (+0,40), EM 100 sem 80% (IDEPE 0, meta 4,0), 1 quesito",
         RequisicaoBDE(
             etapa_ai=etapa(300, True, meta=4.50, resultado=4.90),
-            etapa_em=etapa(100, False),
+            etapa_em=etapa(100, False, meta=4.00),
             reduziu_desigualdade=True,
             terco_menor_elementares=False,
         ),
-        1.5,
-        2.0,
+        0.0,
+        1.0,
     ),
     (
         "F",
@@ -146,15 +146,27 @@ CENARIOS = [
     ),
     (
         "K",
-        "AI 300 com 80% (+0,40), EM 100 sem 80%, sem quesito",
+        "AI 300 com 80% (+0,40), EM 100 sem 80% (IDEPE 0, meta 4,0), sem quesito",
         RequisicaoBDE(
             etapa_ai=etapa(300, True, meta=4.50, resultado=4.90),
-            etapa_em=etapa(100, False),
+            etapa_em=etapa(100, False, meta=4.00),
             reduziu_desigualdade=False,
             terco_menor_elementares=False,
         ),
-        1.5,
-        1.5,
+        0.0,
+        0.0,
+    ),
+    (
+        "L",
+        "Exemplo da regra: AF 100 sem 80% (meta 5,0), EM 50 com 80% (4,0 = meta)",
+        RequisicaoBDE(
+            etapa_af=etapa(100, False, meta=5.0),
+            etapa_em=etapa(50, True, meta=4.0, resultado=4.0),
+            reduziu_desigualdade=False,
+            terco_menor_elementares=False,
+        ),
+        0.0,
+        0.0,
     ),
 ]
 
@@ -187,6 +199,12 @@ def main() -> int:
         if not ok_bde:
             falhas.append(
                 f"{ident}: BDE deu {r.percentual_bde}, esperado {bde_esperado}"
+            )
+
+        if ident == "L" and r.media_ponderada_variacao != -3.3333:
+            falhas.append(
+                f"L: media ponderada deu {r.media_ponderada_variacao}, "
+                "a regra da -3.3333 ((-5,0 x 100 + 0,0 x 50) / 150)"
             )
 
         if ident == "F":

@@ -118,7 +118,7 @@ e em uso na SEPLAG.
    +100% uma vez só. Vale para toda escola, inclusive a que ficou sem IDEPE.
    Quem atinge os dois aparece com a cota em `bonus_equidade`.
 2. **O excedente acima de 100% só soma com o quesito a partir de 200% de
-   IDEPE** (variação ≥ 0,4 em relação à meta, já com a diluição da §5.1-b).
+   IDEPE** (variação média ≥ 0,4 em relação à meta, já com o zero da §5.1-b).
    Abaixo disso, a escola com quesito troca o excedente pelo quesito e o
    resultado para em 100%. Sem quesito, o IDEPE conta inteiro, até 200%.
 3. **Os +50% de participação exigem 80% em todas as etapas.**
@@ -147,25 +147,33 @@ Registro do que ficou para trás: o 3º ramo da `C45` (`(B40+B41)>1 → 2`) era
 `B40<=1` era sempre verdadeiro e o 2º ramo capturava antes; redundante porque,
 se fosse alcançado, devolveria `2`, o mesmo que `1+B40` com `B40=1`.
 
-### 5.1-b A participação virou portão, e é por etapa — NOVO no BDE 2027
+### 5.1-b A participação é por etapa, e etapa sem 80% entra com IDEPE zero — BDE 2027
 
 Até o BDE 2026 a participação era uma pergunta única da escola e apenas somava
-`B44` (+50%). No BDE 2027 ela é perguntada **por etapa** e decide se a etapa
-tem IDEPE:
+`B44` (+50%). No BDE 2027 ela é perguntada **por etapa**:
 
-- Etapa sem 80% não tem IDEPE divulgado. Não se pergunta meta nem resultado
-  dela, e ela entra na conta com **0% de atingimento**, pesando pelas suas
-  matrículas.
-- A média ponderada (`H47`) roda **só entre as etapas aprovadas**, porque só
-  elas têm variação. O percentual convertido é então reduzido na proporção das
-  matrículas que ficaram de fora.
+- **Toda etapa com matrícula entra na média.** Nenhuma é excluída.
+- Etapa com 80% ou mais usa o IDEPE obtido. Etapa abaixo de 80% entra com
+  **IDEPE zero**: a meta continua sendo informada, e a diferença dela é
+  `0 − meta`, um valor bem negativo.
+- A média ponderada (`H47`) usa todas as etapas, pesando pelas matrículas:
+  `Σ[(IDEPE considerado − meta) × matrículas] ÷ Σ matrículas`. Depois ela é
+  convertida pela tabela (`H45`), sem nenhum ajuste adicional.
 - O +50% só é somado se **todas** as etapas atingirem os 80%.
 
-A ordem importa: a diluição acontece **depois** da conversão, não antes. Uma
-etapa sem meta e sem resultado não tem variação para entrar no `H47`. Com essa
-ordem, escola com todas as etapas aprovadas devolve exatamente o mesmo
-`percentual_idepe` do ciclo anterior — a regressão está travada em
-`tests/test_cenarios.py`, cenário F.
+Exemplo da regra (cenário L de `tests/test_cenarios.py`): Anos Finais com 100
+matrículas, meta 5,0 e sem 80% (diferença −5,0); Ensino Médio com 50
+matrículas, meta 4,0 e resultado 4,0 (diferença 0,0). Média:
+`(−5,0 × 100 + 0,0 × 50) ÷ 150 = −3,3333`, que converte para 0%.
+
+Na prática, como as metas ficam em torno de 4 a 5 pontos, uma etapa sem 80%
+com peso relevante de matrículas leva a média para baixo de −0,3 e o IDEPE da
+escola para 0%. Escola com todas as etapas acima de 80% não muda nada em
+relação ao ciclo anterior — a regressão está travada no cenário F.
+
+Registro: uma versão anterior deste simulador excluía a etapa sem 80% da média
+e depois reduzia o percentual convertido pela fração de matrículas que ficaram
+de fora. Foi substituída por esta regra.
 
 ### 5.2 Buraco na faixa (−0,3; −0,2) em `H45` — DECIDIDO: ler a grade
 

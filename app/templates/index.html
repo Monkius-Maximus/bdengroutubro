@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulador BDE — NGR-SEE</title>
+    <title>Simulador BDE — NGR-EDU</title>
     <link rel="icon" type="image/png" href="/static/img/logo-ngr.png">
     <link rel="stylesheet" href="/static/css/estilo.css">
 </head>
@@ -60,6 +60,10 @@
                         <label>Matrículas 2026</label>
                         <input type="number" id="inp-ai-mat" placeholder="Ex: 120" min="1">
                     </div>
+                    <div class="input-campo">
+                        <label>Meta IDEPE</label>
+                        <input type="number" id="inp-ai-meta" placeholder="Ex: 4.50" step="0.01" min="0">
+                    </div>
                 </div>
 
                 <div class="pergunta-bloco">
@@ -72,17 +76,13 @@
 
                 <div class="input-grupo" id="idepe-ai" style="display:none">
                     <div class="input-campo">
-                        <label>Meta IDEPE</label>
-                        <input type="number" id="inp-ai-meta" placeholder="Ex: 4.50" step="0.01" min="0">
-                    </div>
-                    <div class="input-campo">
                         <label>Resultado IDEPE</label>
                         <input type="number" id="inp-ai-res" placeholder="Ex: 4.70" step="0.01" min="0">
                     </div>
                 </div>
 
                 <div class="pergunta-bloco" id="aviso-ai" style="display:none">
-                    <p class="pergunta-item" style="margin-bottom:0">Sem 80% de participação o IDEPE desta etapa não é divulgado. Ela entra no cálculo com <strong>0% de atingimento</strong>, pesando pelas matrículas informadas.</p>
+                    <p class="pergunta-item" style="margin-bottom:0">Sem 80% de participação o IDEPE desta etapa é considerado <strong>zero</strong>. A diferença em relação à meta entra na média da escola, pesando pelas matrículas informadas.</p>
                 </div>
             </div>
 
@@ -93,6 +93,10 @@
                     <div class="input-campo">
                         <label>Matrículas 2026</label>
                         <input type="number" id="inp-af-mat" placeholder="Ex: 200" min="1">
+                    </div>
+                    <div class="input-campo">
+                        <label>Meta IDEPE</label>
+                        <input type="number" id="inp-af-meta" placeholder="Ex: 4.50" step="0.01" min="0">
                     </div>
                 </div>
 
@@ -106,17 +110,13 @@
 
                 <div class="input-grupo" id="idepe-af" style="display:none">
                     <div class="input-campo">
-                        <label>Meta IDEPE</label>
-                        <input type="number" id="inp-af-meta" placeholder="Ex: 4.50" step="0.01" min="0">
-                    </div>
-                    <div class="input-campo">
                         <label>Resultado IDEPE</label>
                         <input type="number" id="inp-af-res" placeholder="Ex: 4.45" step="0.01" min="0">
                     </div>
                 </div>
 
                 <div class="pergunta-bloco" id="aviso-af" style="display:none">
-                    <p class="pergunta-item" style="margin-bottom:0">Sem 80% de participação o IDEPE desta etapa não é divulgado. Ela entra no cálculo com <strong>0% de atingimento</strong>, pesando pelas matrículas informadas.</p>
+                    <p class="pergunta-item" style="margin-bottom:0">Sem 80% de participação o IDEPE desta etapa é considerado <strong>zero</strong>. A diferença em relação à meta entra na média da escola, pesando pelas matrículas informadas.</p>
                 </div>
             </div>
 
@@ -127,6 +127,10 @@
                     <div class="input-campo">
                         <label>Matrículas 2026</label>
                         <input type="number" id="inp-em-mat" placeholder="Ex: 300" min="1">
+                    </div>
+                    <div class="input-campo">
+                        <label>Meta IDEPE</label>
+                        <input type="number" id="inp-em-meta" placeholder="Ex: 5.00" step="0.01" min="0">
                     </div>
                 </div>
 
@@ -140,17 +144,13 @@
 
                 <div class="input-grupo" id="idepe-em" style="display:none">
                     <div class="input-campo">
-                        <label>Meta IDEPE</label>
-                        <input type="number" id="inp-em-meta" placeholder="Ex: 5.00" step="0.01" min="0">
-                    </div>
-                    <div class="input-campo">
                         <label>Resultado IDEPE</label>
                         <input type="number" id="inp-em-res" placeholder="Ex: 5.10" step="0.01" min="0">
                     </div>
                 </div>
 
                 <div class="pergunta-bloco" id="aviso-em" style="display:none">
-                    <p class="pergunta-item" style="margin-bottom:0">Sem 80% de participação o IDEPE desta etapa não é divulgado. Ela entra no cálculo com <strong>0% de atingimento</strong>, pesando pelas matrículas informadas.</p>
+                    <p class="pergunta-item" style="margin-bottom:0">Sem 80% de participação o IDEPE desta etapa é considerado <strong>zero</strong>. A diferença em relação à meta entra na média da escola, pesando pelas matrículas informadas.</p>
                 </div>
             </div>
 
@@ -208,8 +208,8 @@
             <span>Saiba mais</span>
         </button>
         <div class="footer-creditos">
-            <img src="/static/img/logo-ngr.png" alt="NGR-SEE" class="footer-logo" onerror="this.style.display='none'">
-            <span>Desenvolvido pelo <span class="sem-quebra">NGR-SEE · Seplag</span></span>
+            <img src="/static/img/logo-ngr.png" alt="NGR-EDU" class="footer-logo" onerror="this.style.display='none'">
+            <span>Desenvolvido pelo <span class="sem-quebra">NGR-EDU · Seplag</span></span>
         </div>
         <button class="footer-btn" id="btn-whatsapp" onclick="abrirPopup('popup-whatsapp')" aria-label="WhatsApp">
             <svg class="footer-btn-icone" viewBox="0 0 24 24" fill="currentColor">
@@ -226,7 +226,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
             <div class="popup-header">
-                <img src="/static/img/logo-ngr.png" alt="NGR-SEE" class="popup-logo" onerror="this.style.display='none'">
+                <img src="/static/img/logo-ngr.png" alt="NGR-EDU" class="popup-logo" onerror="this.style.display='none'">
                 <h3>Saiba mais</h3>
             </div>
             <div class="popup-body">
@@ -248,7 +248,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
             <div class="popup-header">
-                <img src="/static/img/logo-ngr.png" alt="NGR-SEE" class="popup-logo" onerror="this.style.display='none'">
+                <img src="/static/img/logo-ngr.png" alt="NGR-EDU" class="popup-logo" onerror="this.style.display='none'">
                 <h3>Contato</h3>
             </div>
             <div class="popup-body popup-whatsapp-body">

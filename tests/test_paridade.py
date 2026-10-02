@@ -131,10 +131,9 @@ process.stdout.write(JSON.stringify(casos.map((caso) => {{
     return json.loads(processo.stdout)
 
 
-def _etapa(matriculas: int, participou: bool, meta=None, resultado=None) -> dict:
-    dados = {"matriculas": matriculas, "participacao_maior_80": participou}
+def _etapa(matriculas: int, participou: bool, meta: float, resultado=None) -> dict:
+    dados = {"matriculas": matriculas, "participacao_maior_80": participou, "meta": meta}
     if participou:
-        dados["meta"] = meta
         dados["resultado"] = resultado
     return dados
 
@@ -164,19 +163,19 @@ def gerar_casos() -> list[dict]:
         casos.append({"etapa_ai": _etapa(320, True, 4.5, resultado), **comuns})
         casos.append({"etapa_af": _etapa(91, True, 5.1, resultado), **comuns})
         # Etapa unica reprovada — o caminho que so concorre a equidade.
-        casos.append({"etapa_ai": _etapa(320, False), **comuns})
+        casos.append({"etapa_ai": _etapa(320, False, 4.5), **comuns})
         # Misturas: o peso da reprovada muda tudo.
         casos.append(
             {
                 "etapa_ai": _etapa(1000, True, 4.5, resultado),
-                "etapa_em": _etapa(50, False),
+                "etapa_em": _etapa(50, False, 3.8),
                 **comuns,
             }
         )
         casos.append(
             {
                 "etapa_ai": _etapa(50, True, 4.5, resultado),
-                "etapa_em": _etapa(1000, False),
+                "etapa_em": _etapa(1000, False, 3.8),
                 **comuns,
             }
         )
@@ -193,14 +192,14 @@ def gerar_casos() -> list[dict]:
         casos.append(
             {
                 "etapa_ai": _etapa(317, True, 4.5, resultado),
-                "etapa_af": _etapa(83, False),
+                "etapa_af": _etapa(83, False, 5.1),
                 "etapa_em": _etapa(1234, True, 3.8, 4.05),
                 **comuns,
             }
         )
         # Todas reprovadas.
         casos.append(
-            {"etapa_ai": _etapa(317, False), "etapa_af": _etapa(83, False), **comuns}
+            {"etapa_ai": _etapa(317, False, 4.5), "etapa_af": _etapa(83, False, 5.1), **comuns}
         )
     return casos
 
