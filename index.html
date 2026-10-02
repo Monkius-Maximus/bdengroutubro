@@ -23,6 +23,7 @@
     --verde: #16a34a;
     --amarelo: #ca8a04;
     --vermelho: #dc2626;
+    --vermelho-texto: #b91c1c;
     --verde-bg: #dcfce7;
     --amarelo-bg: #fef9c3;
     --vermelho-bg: #fee2e2;
@@ -31,6 +32,14 @@
     --sombra-md: 0 4px 24px rgba(26, 58, 92, 0.12);
     --raio: 12px;
     --overlay: rgba(15, 23, 42, 0.45);
+
+    /* Uma cor por etapa, usada so no nome da etapa, em todas as telas.
+       Escolhidas para nao se confundirem entre si (inclusive com daltonismo)
+       nem com o azul da marca e as cores de status; contraste >= 4,9:1 em todos
+       os fundos onde aparecem. */
+    --etapa-ai: #6d28d9;
+    --etapa-af: #be185d;
+    --etapa-em: #3f6212;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -153,6 +162,22 @@ body {
     line-height: 1.4;
 }
 
+.pergunta-instrucao {
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--cinza);
+    margin: -8px 0 16px;
+    line-height: 1.4;
+}
+
+/* Nome de etapa, sempre na cor da etapa */
+.etapa-nome { font-weight: 700; }
+/* Dois seletores de classe: vence regras como ".resumo-texto strong", que
+   pintariam o nome de azul. */
+.etapa-nome.etapa-ai { color: var(--etapa-ai); }
+.etapa-nome.etapa-af { color: var(--etapa-af); }
+.etapa-nome.etapa-em { color: var(--etapa-em); }
+
 /* Opcoes */
 .opcoes {
     display: flex;
@@ -239,6 +264,34 @@ body {
     outline: none;
     border-color: var(--azul-claro);
     box-shadow: 0 0 0 3px rgba(42, 100, 150, 0.15);
+}
+
+.dica-campo {
+    font-size: 0.78rem;
+    color: var(--cinza);
+    line-height: 1.35;
+}
+
+/* Erro de preenchimento: vermelho e caixa alta, abaixo do campo ou pergunta */
+.erro-campo {
+    color: var(--vermelho-texto);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1.35;
+    margin-top: 6px;
+}
+.input-campo.com-erro input {
+    border-color: var(--vermelho);
+    background: var(--vermelho-bg);
+}
+.pergunta-bloco.com-erro,
+.opcoes.com-erro .opcao-card {
+    border-color: var(--vermelho);
+}
+.opcao-card:focus-visible {
+    outline: 3px solid var(--azul-claro);
+    outline-offset: 2px;
 }
 
 /* Perguntas com Sim/Não (Step 4 equidade) */
@@ -724,20 +777,21 @@ body {
             <!-- STEP 0: Etapas -->
             <div class="step" data-step="0">
                 <h2 class="pergunta-titulo">Quais etapas sua escola <strong>pactuou metas</strong> para 2026?</h2>
+                <p class="pergunta-instrucao">Marque todas as etapas com meta IDEPE pactuada. Nas próximas telas você informa os dados de cada uma.</p>
                 <div class="opcoes" id="opcoes-etapas">
-                    <div class="opcao-card" data-campo="etapa_ai" onclick="toggleOpcao(this)">
+                    <div class="opcao-card" data-campo="etapa_ai" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleOpcao(this)" onkeydown="teclaNaOpcao(event, this)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                        <span class="texto">Anos Iniciais (1º ao 5º ano)</span>
+                        <span class="texto"><span class="etapa-nome etapa-ai">Anos Iniciais</span> (1º ao 5º ano)</span>
                         <span class="check"></span>
                     </div>
-                    <div class="opcao-card" data-campo="etapa_af" onclick="toggleOpcao(this)">
+                    <div class="opcao-card" data-campo="etapa_af" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleOpcao(this)" onkeydown="teclaNaOpcao(event, this)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-                        <span class="texto">Anos Finais (6º ao 9º ano)</span>
+                        <span class="texto"><span class="etapa-nome etapa-af">Anos Finais</span> (6º ao 9º ano)</span>
                         <span class="check"></span>
                     </div>
-                    <div class="opcao-card" data-campo="etapa_em" onclick="toggleOpcao(this)">
+                    <div class="opcao-card" data-campo="etapa_em" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleOpcao(this)" onkeydown="teclaNaOpcao(event, this)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                        <span class="texto">Ensino Médio (1º ao 3º ano)</span>
+                        <span class="texto"><span class="etapa-nome etapa-em">Ensino Médio</span> (1º ao 3º ano)</span>
                         <span class="check"></span>
                     </div>
                 </div>
@@ -745,20 +799,23 @@ body {
 
             <!-- STEP 1: AI -->
             <div class="step" data-step="1" style="display:none">
-                <h2 class="pergunta-titulo">Informe os dados dos <strong>Anos Iniciais</strong></h2>
+                <h2 class="pergunta-titulo">Informe os dados dos <span class="etapa-nome etapa-ai">Anos Iniciais</span></h2>
+                <p class="pergunta-instrucao">Preencha as matrículas e a meta e responda sobre a participação. Todos os campos são obrigatórios.</p>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label>Matrículas 2026</label>
-                        <input type="number" id="inp-ai-mat" placeholder="Ex: 120" min="1">
+                        <label for="inp-ai-mat">Matrículas 2026</label>
+                        <input type="number" id="inp-ai-mat" inputmode="numeric" placeholder="Ex: 120" min="10" max="300000" step="1" aria-describedby="dica-ai-mat">
+                        <p class="dica-campo" id="dica-ai-mat">Total de alunos matriculados na etapa em 2026. Número inteiro de 10 a 300.000.</p>
                     </div>
                     <div class="input-campo">
-                        <label>Meta IDEPE</label>
-                        <input type="number" id="inp-ai-meta" placeholder="Ex: 4.50" step="0.01" min="0">
+                        <label for="inp-ai-meta">Meta IDEPE 2026</label>
+                        <input type="number" id="inp-ai-meta" inputmode="decimal" placeholder="Ex: 4.50" min="2" max="6" step="0.01" aria-describedby="dica-ai-meta">
+                        <p class="dica-campo" id="dica-ai-meta">Meta pactuada no Termo de Compromisso. De 2,00 a 6,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
-                <div class="pergunta-bloco">
-                    <p class="pergunta-item">Esta etapa atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE?</p>
+                <div class="pergunta-bloco" id="bloco-ai-part">
+                    <p class="pergunta-item">Os <span class="etapa-nome etapa-ai">Anos Iniciais</span> atingiram <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE 2026?</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="ai" data-valor="true" onclick="toggleParticipacaoEtapa(this)">Sim</button>
                         <button type="button" class="btn-simnao" data-campo="ai" data-valor="false" onclick="toggleParticipacaoEtapa(this)">Não</button>
@@ -767,8 +824,9 @@ body {
 
                 <div class="input-grupo" id="idepe-ai" style="display:none">
                     <div class="input-campo">
-                        <label>Resultado IDEPE</label>
-                        <input type="number" id="inp-ai-res" placeholder="Ex: 4.70" step="0.01" min="0">
+                        <label for="inp-ai-res">Resultado IDEPE 2026</label>
+                        <input type="number" id="inp-ai-res" inputmode="decimal" placeholder="Ex: 4.70" min="0" max="10" step="0.01" aria-describedby="dica-ai-res">
+                        <p class="dica-campo" id="dica-ai-res">IDEPE obtido pela escola na etapa. De 0,00 a 10,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
@@ -779,20 +837,23 @@ body {
 
             <!-- STEP 2: AF -->
             <div class="step" data-step="2" style="display:none">
-                <h2 class="pergunta-titulo">Informe os dados dos <strong>Anos Finais</strong></h2>
+                <h2 class="pergunta-titulo">Informe os dados dos <span class="etapa-nome etapa-af">Anos Finais</span></h2>
+                <p class="pergunta-instrucao">Preencha as matrículas e a meta e responda sobre a participação. Todos os campos são obrigatórios.</p>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label>Matrículas 2026</label>
-                        <input type="number" id="inp-af-mat" placeholder="Ex: 200" min="1">
+                        <label for="inp-af-mat">Matrículas 2026</label>
+                        <input type="number" id="inp-af-mat" inputmode="numeric" placeholder="Ex: 200" min="10" max="300000" step="1" aria-describedby="dica-af-mat">
+                        <p class="dica-campo" id="dica-af-mat">Total de alunos matriculados na etapa em 2026. Número inteiro de 10 a 300.000.</p>
                     </div>
                     <div class="input-campo">
-                        <label>Meta IDEPE</label>
-                        <input type="number" id="inp-af-meta" placeholder="Ex: 4.50" step="0.01" min="0">
+                        <label for="inp-af-meta">Meta IDEPE 2026</label>
+                        <input type="number" id="inp-af-meta" inputmode="decimal" placeholder="Ex: 4.50" min="2" max="6" step="0.01" aria-describedby="dica-af-meta">
+                        <p class="dica-campo" id="dica-af-meta">Meta pactuada no Termo de Compromisso. De 2,00 a 6,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
-                <div class="pergunta-bloco">
-                    <p class="pergunta-item">Esta etapa atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE?</p>
+                <div class="pergunta-bloco" id="bloco-af-part">
+                    <p class="pergunta-item">Os <span class="etapa-nome etapa-af">Anos Finais</span> atingiram <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE 2026?</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="af" data-valor="true" onclick="toggleParticipacaoEtapa(this)">Sim</button>
                         <button type="button" class="btn-simnao" data-campo="af" data-valor="false" onclick="toggleParticipacaoEtapa(this)">Não</button>
@@ -801,8 +862,9 @@ body {
 
                 <div class="input-grupo" id="idepe-af" style="display:none">
                     <div class="input-campo">
-                        <label>Resultado IDEPE</label>
-                        <input type="number" id="inp-af-res" placeholder="Ex: 4.45" step="0.01" min="0">
+                        <label for="inp-af-res">Resultado IDEPE 2026</label>
+                        <input type="number" id="inp-af-res" inputmode="decimal" placeholder="Ex: 4.45" min="0" max="10" step="0.01" aria-describedby="dica-af-res">
+                        <p class="dica-campo" id="dica-af-res">IDEPE obtido pela escola na etapa. De 0,00 a 10,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
@@ -813,20 +875,23 @@ body {
 
             <!-- STEP 3: EM -->
             <div class="step" data-step="3" style="display:none">
-                <h2 class="pergunta-titulo">Informe os dados do <strong>Ensino Médio</strong></h2>
+                <h2 class="pergunta-titulo">Informe os dados do <span class="etapa-nome etapa-em">Ensino Médio</span></h2>
+                <p class="pergunta-instrucao">Preencha as matrículas e a meta e responda sobre a participação. Todos os campos são obrigatórios.</p>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label>Matrículas 2026</label>
-                        <input type="number" id="inp-em-mat" placeholder="Ex: 300" min="1">
+                        <label for="inp-em-mat">Matrículas 2026</label>
+                        <input type="number" id="inp-em-mat" inputmode="numeric" placeholder="Ex: 300" min="10" max="300000" step="1" aria-describedby="dica-em-mat">
+                        <p class="dica-campo" id="dica-em-mat">Total de alunos matriculados na etapa em 2026. Número inteiro de 10 a 300.000.</p>
                     </div>
                     <div class="input-campo">
-                        <label>Meta IDEPE</label>
-                        <input type="number" id="inp-em-meta" placeholder="Ex: 5.00" step="0.01" min="0">
+                        <label for="inp-em-meta">Meta IDEPE 2026</label>
+                        <input type="number" id="inp-em-meta" inputmode="decimal" placeholder="Ex: 5.00" min="2" max="6" step="0.01" aria-describedby="dica-em-meta">
+                        <p class="dica-campo" id="dica-em-meta">Meta pactuada no Termo de Compromisso. De 2,00 a 6,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
-                <div class="pergunta-bloco">
-                    <p class="pergunta-item">Esta etapa atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE?</p>
+                <div class="pergunta-bloco" id="bloco-em-part">
+                    <p class="pergunta-item">O <span class="etapa-nome etapa-em">Ensino Médio</span> atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE 2026?</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="em" data-valor="true" onclick="toggleParticipacaoEtapa(this)">Sim</button>
                         <button type="button" class="btn-simnao" data-campo="em" data-valor="false" onclick="toggleParticipacaoEtapa(this)">Não</button>
@@ -835,8 +900,9 @@ body {
 
                 <div class="input-grupo" id="idepe-em" style="display:none">
                     <div class="input-campo">
-                        <label>Resultado IDEPE</label>
-                        <input type="number" id="inp-em-res" placeholder="Ex: 5.10" step="0.01" min="0">
+                        <label for="inp-em-res">Resultado IDEPE 2026</label>
+                        <input type="number" id="inp-em-res" inputmode="decimal" placeholder="Ex: 5.10" min="0" max="10" step="0.01" aria-describedby="dica-em-res">
+                        <p class="dica-campo" id="dica-em-res">IDEPE obtido pela escola na etapa. De 0,00 a 10,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
@@ -848,8 +914,9 @@ body {
             <!-- STEP 4: Equidade -->
             <div class="step" data-step="4" style="display:none">
                 <h2 class="pergunta-titulo">Responda sobre as <strong>Metas de Equidade</strong></h2>
+                <p class="pergunta-instrucao">Responda Sim ou Não às duas perguntas. Elas valem para a escola inteira, não para uma etapa.</p>
 
-                <div class="pergunta-bloco">
+                <div class="pergunta-bloco" id="bloco-reduziu_desigualdade">
                     <p class="pergunta-item">Houve evolução, no Saepe 2026, dos estudantes Pretos, Pardos e Indígenas e daqueles de nível socioeconômico mais baixo, em comparação com 2025? (Consulte o BI da Equidade)</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="reduziu_desigualdade" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
@@ -857,7 +924,7 @@ body {
                     </div>
                 </div>
 
-                <div class="pergunta-bloco">
+                <div class="pergunta-bloco" id="bloco-terco_menor_elementares">
                     <p class="pergunta-item">Na sua Macrorregião, comparando com escolas do mesmo tipo, sua escola está entre as 33,3% (no primeiro terço) com menor percentual de estudantes nos níveis elementares no SAEPE 2026? (Consulte o BI do SAEPE – versão GRE - Botão PD - filtre as Gres da Macro região e o tipo de sua escola)</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="terco_menor_elementares" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
@@ -881,7 +948,7 @@ body {
 
         <div class="navegacao" id="navegacao">
             <button class="btn btn-voltar" id="btn-voltar" onclick="voltar()" style="display:none">Voltar</button>
-            <button class="btn btn-proximo" id="btn-proximo" onclick="proximo()" disabled>Próximo</button>
+            <button class="btn btn-proximo" id="btn-proximo" onclick="proximo()">Próximo</button>
         </div>
 
     </main>
@@ -997,12 +1064,6 @@ var TETO_BDE = 3.0;
 
 // IDEPE a partir do qual o excedente acima de 100% soma com a equidade.
 var IDEPE_ACUMULA_COM_EQUIDADE = 2.0;
-
-// Faixas da validacao de dados da planilha (B6:B8 e B19/B20 etc.).
-var MATRICULAS_MIN = 8;
-var MATRICULAS_MAX = 50000;
-var IDEPE_MIN = 1.5;
-var IDEPE_MAX = 9.2;
 
 var NOMES_ETAPAS = {
     ai: 'Anos Iniciais',
@@ -1150,6 +1211,16 @@ const PASSO_RESULTADO = 6;
 
 const PASSO_DA_ETAPA = { ai: 1, af: 2, em: 3 };
 
+/* Nomes das etapas como aparecem nas mensagens: "dos Anos Iniciais". */
+const ETAPA_NAS_MENSAGENS = { ai: 'dos Anos Iniciais', af: 'dos Anos Finais', em: 'do Ensino Médio' };
+
+/* Limites dos campos. Os mesmos valem no backend, em src/bde/schemas.py. */
+const LIMITES = {
+    matriculas: { min: 10, max: 300000 },
+    meta: { min: 2, max: 6 },
+    resultado: { min: 0, max: 10 },
+};
+
 const estado = {
     stepAtual: 0,
     resultadoApi: null,
@@ -1289,28 +1360,49 @@ function atualizarUI() {
         btnProximo.style.display = 'flex';
         btnProximo.textContent = 'Próximo';
         btnProximo.className = 'btn btn-proximo';
-        btnProximo.disabled = !stepValido(stepAtual);
+        btnProximo.disabled = false;
         btnProximo.onclick = proximo;
     }
 }
 
-function stepValido(step) {
-    switch (step) {
-        case PASSO_ETAPAS: return estado.respostas.etapas_selecionadas.length > 0;
-        case 1: return estado.respostas.etapa_ai !== null;
-        case 2: return estado.respostas.etapa_af !== null;
-        case 3: return estado.respostas.etapa_em !== null;
-        case PASSO_EQUIDADE:
-            return estado.respostas.reduziu_desigualdade !== null
-                && estado.respostas.terco_menor_elementares !== null;
-        default: return true;
+/**
+ * Confere o passo atual e devolve os erros encontrados, cada um com o
+ * elemento onde a mensagem aparece. Lista vazia = pode avancar.
+ */
+function validarPasso(step) {
+    if (step === PASSO_ETAPAS) {
+        return estado.respostas.etapas_selecionadas.length > 0
+            ? []
+            : [{ alvo: document.getElementById('opcoes-etapas'), msg: 'Marque ao menos uma etapa para continuar.' }];
     }
+    const prefixo = Object.keys(PASSO_DA_ETAPA).find((k) => PASSO_DA_ETAPA[k] === step);
+    if (prefixo) return lerEtapa(prefixo).erros;
+    if (step === PASSO_EQUIDADE) {
+        const erros = [];
+        if (estado.respostas.reduziu_desigualdade === null) {
+            erros.push({ alvo: document.getElementById('bloco-reduziu_desigualdade'), msg: 'Responda Sim ou Não à pergunta sobre a evolução dos estudantes PPI e de nível socioeconômico mais baixo.' });
+        }
+        if (estado.respostas.terco_menor_elementares === null) {
+            erros.push({ alvo: document.getElementById('bloco-terco_menor_elementares'), msg: 'Responda Sim ou Não à pergunta sobre o 1º terço de elementares.' });
+        }
+        return erros;
+    }
+    return [];
 }
 
 function proximo() {
-    if (!stepValido(estado.stepAtual)) return;
+    const step = estado.stepAtual;
+    limparErros(document.querySelector(`.step[data-step="${step}"]`));
+    const erros = validarPasso(step);
+    if (erros.length > 0) {
+        mostrarErrosDeCampo(erros);
+        return;
+    }
 
-    if (estado.stepAtual === PASSO_EQUIDADE) {
+    const prefixo = Object.keys(PASSO_DA_ETAPA).find((k) => PASSO_DA_ETAPA[k] === step);
+    if (prefixo) estado.respostas[`etapa_${prefixo}`] = lerEtapa(prefixo).dados;
+
+    if (step === PASSO_EQUIDADE) {
         enviarSimulacao();
         return;
     }
@@ -1338,19 +1430,28 @@ function devePularStep(step) {
     return false;
 }
 
+/* Os dados da etapa so passam a existir quando a tela dela e validada, no
+   Proximo. Marcar a etapa aqui nao cria dados vazios. */
 function toggleOpcao(card) {
     const campo = card.dataset.campo;
-    card.classList.toggle('selecionado');
+    const marcado = card.classList.toggle('selecionado');
+    card.setAttribute('aria-checked', String(marcado));
     const chave = campo.replace('etapa_', '');
-    const idx = estado.respostas.etapas_selecionadas.indexOf(chave);
-    if (idx >= 0) {
-        estado.respostas.etapas_selecionadas.splice(idx, 1);
-        estado.respostas[campo] = null;
-    } else {
+    if (marcado) {
         estado.respostas.etapas_selecionadas.push(chave);
-        estado.respostas[campo] = {};
+    } else {
+        estado.respostas.etapas_selecionadas.splice(estado.respostas.etapas_selecionadas.indexOf(chave), 1);
+        estado.respostas[campo] = null;
     }
+    limparErros(document.getElementById('opcoes-etapas').parentElement);
     atualizarUI();
+}
+
+/* Espaco e Enter marcam a etapa, como numa caixa de selecao. */
+function teclaNaOpcao(e, card) {
+    if (e.key !== ' ' && e.key !== 'Enter') return;
+    e.preventDefault();
+    toggleOpcao(card);
 }
 
 function toggleSimNaoPergunta(btn) {
@@ -1361,6 +1462,7 @@ function toggleSimNaoPergunta(btn) {
     btn.classList.add('selecionado');
 
     estado.respostas[campo] = valor;
+    limparErros(document.getElementById(`bloco-${campo}`));
     atualizarUI();
 }
 
@@ -1382,81 +1484,96 @@ function toggleParticipacaoEtapa(btn) {
 
     if (!participou) {
         document.getElementById(`inp-${prefixo}-res`).value = '';
+        limparErros(document.getElementById(`idepe-${prefixo}`));
     }
 
-    recalcularEtapa(prefixo, true);
+    limparErros(document.getElementById(`bloco-${prefixo}-part`));
     ajustarEspacoDoRodape();
 }
 
 /**
- * `silencioso` existe porque a validacao roda tambem em momentos em que o
- * campo vazio e o estado normal — logo apos marcar "Sim" na participacao, por
- * exemplo, quando meta e resultado ainda nem apareceram na tela. Reclamar ali
- * seria acusar a pessoa de nao ter digitado o que acabou de surgir.
+ * Le um campo numerico. `decimais` e o maximo de casas depois da virgula.
+ * Devolve { valor } ou { msg } com o motivo da recusa.
  */
-function validarInputsEtapa(prefixo, silencioso = false) {
-    const reclamar = (msg) => { if (!silencioso) mostrarErro(msg); return null; };
+function lerNumero(input, nomeCampo, limite, decimais) {
+    const texto = input.value.trim();
+    if (texto === '') {
+        // Campo com texto invalido (ex.: letras) chega vazio: validity diferencia.
+        return { msg: input.validity.badInput
+            ? `O campo ${nomeCampo} tem um valor inválido. Use apenas números.`
+            : `Preencha o campo ${nomeCampo}.` };
+    }
+    const formato = decimais === 0 ? /^\d+$/ : new RegExp(`^\\d+(\\.\\d{1,${decimais}})?$`);
+    const faixa = decimais === 0
+        ? `um número inteiro de ${limite.min.toLocaleString('pt-BR')} a ${limite.max.toLocaleString('pt-BR')}`
+        : `um valor de ${limite.min.toFixed(2).replace('.', ',')} a ${limite.max.toFixed(2).replace('.', ',')}, com até duas casas decimais`;
+    const valor = Number(texto);
+    if (!formato.test(texto) || valor < limite.min || valor > limite.max) {
+        return { msg: `${nomeCampo}: informe ${faixa}.` };
+    }
+    return { valor };
+}
+
+/**
+ * Le a tela de uma etapa. Devolve { dados, erros }: `dados` e o objeto que vai
+ * para o calculo, e so existe quando `erros` esta vazio.
+ */
+function lerEtapa(prefixo) {
+    const de = ETAPA_NAS_MENSAGENS[prefixo];
+    const erros = [];
+    const campo = (sufixo) => document.getElementById(`inp-${prefixo}-${sufixo}`);
+
+    const mat = lerNumero(campo('mat'), `Matrículas 2026 ${de}`, LIMITES.matriculas, 0);
+    if (mat.msg) erros.push({ alvo: campo('mat'), msg: mat.msg });
+    const meta = lerNumero(campo('meta'), `Meta IDEPE 2026 ${de}`, LIMITES.meta, 2);
+    if (meta.msg) erros.push({ alvo: campo('meta'), msg: meta.msg });
 
     const participou = estado.participacao[prefixo];
-    if (participou === null) return null;
-
-    const mat = parseFloat(document.getElementById(`inp-${prefixo}-mat`).value);
-    if (!mat || mat <= 0) {
-        return reclamar('Informe as matrículas da etapa (maior que zero).');
+    if (participou === null) {
+        erros.push({ alvo: document.getElementById(`bloco-${prefixo}-part`), msg: `Responda se a participação ${de} atingiu 80%.` });
+    }
+    let res = {};
+    if (participou) {
+        res = lerNumero(campo('res'), `Resultado IDEPE 2026 ${de}`, LIMITES.resultado, 2);
+        if (res.msg) erros.push({ alvo: campo('res'), msg: res.msg });
     }
 
-    const meta = parseFloat(document.getElementById(`inp-${prefixo}-meta`).value);
-    if (isNaN(meta) || meta <= 0) {
-        return reclamar('Preencha a meta IDEPE com um valor válido (maior que zero).');
-    }
-
+    if (erros.length > 0) return { dados: null, erros };
     // Etapa sem 80% entra com IDEPE zero: nao tem resultado a informar.
-    if (!participou) {
-        return { matriculas: Math.round(mat), participacao_maior_80: false, meta };
-    }
-
-    const res = parseFloat(document.getElementById(`inp-${prefixo}-res`).value);
-    if (isNaN(res) || res <= 0) {
-        return reclamar('Preencha o resultado IDEPE com um valor válido (maior que zero).');
-    }
-    return {
-        matriculas: Math.round(mat),
-        participacao_maior_80: true,
-        meta,
-        resultado: res,
-    };
+    const dados = { matriculas: mat.valor, participacao_maior_80: participou, meta: meta.valor };
+    if (participou) dados.resultado = res.valor;
+    return { dados, erros };
 }
 
-/** Revalida a etapa e guarda o objeto (ou null) em estado.respostas. */
-function recalcularEtapa(prefixo, silencioso = false) {
-    estado.respostas[`etapa_${prefixo}`] = validarInputsEtapa(prefixo, silencioso);
-    atualizarUI();
-}
-
-document.addEventListener('focusout', (e) => {
-    if (!e.target.matches('.input-campo input')) return;
-    const step = e.target.closest('.step');
-    if (!step) return;
-    const stepNum = parseInt(step.dataset.step);
-    let prefixo = null;
-    if (stepNum === 1) prefixo = 'ai';
-    if (stepNum === 2) prefixo = 'af';
-    if (stepNum === 3) prefixo = 'em';
-    if (!prefixo) return;
-
-    // So valida quando os campos esperados tem algo digitado: sair de
-    // "Matriculas" para preencher "Meta" nao e erro, e o toast a cada tab era
-    // ruido. Etapa sem participacao nao tem resultado.
-    const esperados = estado.participacao[prefixo] ? ['mat', 'meta', 'res'] : ['mat', 'meta'];
-    const preenchidos = esperados.every(function (campo) {
-        return document.getElementById(`inp-${prefixo}-${campo}`).value.trim() !== '';
+/* Mensagem em vermelho e caixa alta logo abaixo do campo ou da pergunta. */
+function mostrarErrosDeCampo(erros) {
+    erros.forEach(({ alvo, msg }) => {
+        const ehCampo = alvo.tagName === 'INPUT';
+        const caixa = ehCampo ? alvo.closest('.input-campo') : alvo;
+        const p = document.createElement('p');
+        p.className = 'erro-campo';
+        p.setAttribute('role', 'alert');
+        p.textContent = msg;
+        caixa.appendChild(p);
+        caixa.classList.add('com-erro');
+        if (ehCampo) alvo.setAttribute('aria-invalid', 'true');
     });
-    if (!preenchidos) {
-        estado.respostas[`etapa_${prefixo}`] = null;
-        atualizarUI();
-        return;
-    }
-    recalcularEtapa(prefixo);
+    const primeiro = erros[0].alvo;
+    primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (primeiro.tagName === 'INPUT') primeiro.focus({ preventScroll: true });
+}
+
+function limparErros(raiz) {
+    raiz.querySelectorAll('.erro-campo').forEach((el) => el.remove());
+    raiz.querySelectorAll('.com-erro').forEach((el) => el.classList.remove('com-erro'));
+    if (raiz.classList.contains('com-erro')) raiz.classList.remove('com-erro');
+    raiz.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
+}
+
+/* Digitar de novo num campo apaga a mensagem dele. */
+document.addEventListener('input', (e) => {
+    const caixa = e.target.closest('.input-campo');
+    if (caixa) limparErros(caixa);
 });
 
 /**
@@ -1484,7 +1601,8 @@ function enviarSimulacao() {
 function montarResumo() {
     const r = estado.respostas;
     const etapasNomes = { ai: 'Anos Iniciais', af: 'Anos Finais', em: 'Ensino Médio' };
-    let html = '<h2 class="resumo-titulo">Resumo das Informações</h2>';
+    let html = '<h2 class="resumo-titulo">Resumo das Informações</h2>'
+        + '<p class="pergunta-instrucao">Confira os dados antes de ver o resultado. Para corrigir algo, use Voltar.</p>';
 
     r.etapas_selecionadas.forEach(chave => {
         const dados = r[`etapa_${chave}`];
@@ -1501,7 +1619,7 @@ function montarResumo() {
             <div class="resumo-item ${parseFloat(variacao) >= 0 ? 'sim' : 'nao'}">
                 <div class="resumo-icone">${parseFloat(variacao) >= 0 ? '+' : '-'}</div>
                 <div class="resumo-texto">
-                    <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | ${rotuloIdepe} | Diferença Meta-Resultado: ${sinal}${variacao}
+                    <strong class="etapa-nome etapa-${chave}">${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | ${rotuloIdepe} | Diferença Meta-Resultado: ${sinal}${variacao}
                 </div>
             </div>`;
     });
@@ -1586,7 +1704,11 @@ function reiniciar() {
         reduziu_desigualdade: null,
         terco_menor_elementares: null,
     };
-    document.querySelectorAll('.opcao-card').forEach(c => c.classList.remove('selecionado'));
+    document.querySelectorAll('.opcao-card').forEach(c => {
+        c.classList.remove('selecionado');
+        c.setAttribute('aria-checked', 'false');
+    });
+    limparErros(document.getElementById('area-conteudo'));
     document.querySelectorAll('.btn-simnao').forEach(b => b.classList.remove('selecionado'));
     document.querySelectorAll('.input-campo input').forEach(i => i.value = '');
     ['ai', 'af', 'em'].forEach((prefixo) => {

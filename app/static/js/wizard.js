@@ -11,6 +11,16 @@ const PASSO_RESULTADO = 6;
 
 const PASSO_DA_ETAPA = { ai: 1, af: 2, em: 3 };
 
+/* Nomes das etapas como aparecem nas mensagens: "dos Anos Iniciais". */
+const ETAPA_NAS_MENSAGENS = { ai: 'dos Anos Iniciais', af: 'dos Anos Finais', em: 'do Ensino Médio' };
+
+/* Limites dos campos. Os mesmos valem no backend, em src/bde/schemas.py. */
+const LIMITES = {
+    matriculas: { min: 10, max: 300000 },
+    meta: { min: 2, max: 6 },
+    resultado: { min: 0, max: 10 },
+};
+
 const estado = {
     stepAtual: 0,
     resultadoApi: null,
@@ -150,28 +160,49 @@ function atualizarUI() {
         btnProximo.style.display = 'flex';
         btnProximo.textContent = 'Próximo';
         btnProximo.className = 'btn btn-proximo';
-        btnProximo.disabled = !stepValido(stepAtual);
+        btnProximo.disabled = false;
         btnProximo.onclick = proximo;
     }
 }
 
-function stepValido(step) {
-    switch (step) {
-        case PASSO_ETAPAS: return estado.respostas.etapas_selecionadas.length > 0;
-        case 1: return estado.respostas.etapa_ai !== null;
-        case 2: return estado.respostas.etapa_af !== null;
-        case 3: return estado.respostas.etapa_em !== null;
-        case PASSO_EQUIDADE:
-            return estado.respostas.reduziu_desigualdade !== null
-                && estado.respostas.terco_menor_elementares !== null;
-        default: return true;
+/**
+ * Confere o passo atual e devolve os erros encontrados, cada um com o
+ * elemento onde a mensagem aparece. Lista vazia = pode avancar.
+ */
+function validarPasso(step) {
+    if (step === PASSO_ETAPAS) {
+        return estado.respostas.etapas_selecionadas.length > 0
+            ? []
+            : [{ alvo: document.getElementById('opcoes-etapas'), msg: 'Marque ao menos uma etapa para continuar.' }];
     }
+    const prefixo = Object.keys(PASSO_DA_ETAPA).find((k) => PASSO_DA_ETAPA[k] === step);
+    if (prefixo) return lerEtapa(prefixo).erros;
+    if (step === PASSO_EQUIDADE) {
+        const erros = [];
+        if (estado.respostas.reduziu_desigualdade === null) {
+            erros.push({ alvo: document.getElementById('bloco-reduziu_desigualdade'), msg: 'Responda Sim ou Não à pergunta sobre a evolução dos estudantes PPI e de nível socioeconômico mais baixo.' });
+        }
+        if (estado.respostas.terco_menor_elementares === null) {
+            erros.push({ alvo: document.getElementById('bloco-terco_menor_elementares'), msg: 'Responda Sim ou Não à pergunta sobre o 1º terço de elementares.' });
+        }
+        return erros;
+    }
+    return [];
 }
 
 function proximo() {
-    if (!stepValido(estado.stepAtual)) return;
+    const step = estado.stepAtual;
+    limparErros(document.querySelector(`.step[data-step="${step}"]`));
+    const erros = validarPasso(step);
+    if (erros.length > 0) {
+        mostrarErrosDeCampo(erros);
+        return;
+    }
 
-    if (estado.stepAtual === PASSO_EQUIDADE) {
+    const prefixo = Object.keys(PASSO_DA_ETAPA).find((k) => PASSO_DA_ETAPA[k] === step);
+    if (prefixo) estado.respostas[`etapa_${prefixo}`] = lerEtapa(prefixo).dados;
+
+    if (step === PASSO_EQUIDADE) {
         enviarSimulacao();
         return;
     }
@@ -199,19 +230,28 @@ function devePularStep(step) {
     return false;
 }
 
+/* Os dados da etapa so passam a existir quando a tela dela e validada, no
+   Proximo. Marcar a etapa aqui nao cria dados vazios. */
 function toggleOpcao(card) {
     const campo = card.dataset.campo;
-    card.classList.toggle('selecionado');
+    const marcado = card.classList.toggle('selecionado');
+    card.setAttribute('aria-checked', String(marcado));
     const chave = campo.replace('etapa_', '');
-    const idx = estado.respostas.etapas_selecionadas.indexOf(chave);
-    if (idx >= 0) {
-        estado.respostas.etapas_selecionadas.splice(idx, 1);
-        estado.respostas[campo] = null;
-    } else {
+    if (marcado) {
         estado.respostas.etapas_selecionadas.push(chave);
-        estado.respostas[campo] = {};
+    } else {
+        estado.respostas.etapas_selecionadas.splice(estado.respostas.etapas_selecionadas.indexOf(chave), 1);
+        estado.respostas[campo] = null;
     }
+    limparErros(document.getElementById('opcoes-etapas').parentElement);
     atualizarUI();
+}
+
+/* Espaco e Enter marcam a etapa, como numa caixa de selecao. */
+function teclaNaOpcao(e, card) {
+    if (e.key !== ' ' && e.key !== 'Enter') return;
+    e.preventDefault();
+    toggleOpcao(card);
 }
 
 function toggleSimNaoPergunta(btn) {
@@ -222,6 +262,7 @@ function toggleSimNaoPergunta(btn) {
     btn.classList.add('selecionado');
 
     estado.respostas[campo] = valor;
+    limparErros(document.getElementById(`bloco-${campo}`));
     atualizarUI();
 }
 
@@ -243,81 +284,96 @@ function toggleParticipacaoEtapa(btn) {
 
     if (!participou) {
         document.getElementById(`inp-${prefixo}-res`).value = '';
+        limparErros(document.getElementById(`idepe-${prefixo}`));
     }
 
-    recalcularEtapa(prefixo, true);
+    limparErros(document.getElementById(`bloco-${prefixo}-part`));
     ajustarEspacoDoRodape();
 }
 
 /**
- * `silencioso` existe porque a validacao roda tambem em momentos em que o
- * campo vazio e o estado normal — logo apos marcar "Sim" na participacao, por
- * exemplo, quando meta e resultado ainda nem apareceram na tela. Reclamar ali
- * seria acusar a pessoa de nao ter digitado o que acabou de surgir.
+ * Le um campo numerico. `decimais` e o maximo de casas depois da virgula.
+ * Devolve { valor } ou { msg } com o motivo da recusa.
  */
-function validarInputsEtapa(prefixo, silencioso = false) {
-    const reclamar = (msg) => { if (!silencioso) mostrarErro(msg); return null; };
+function lerNumero(input, nomeCampo, limite, decimais) {
+    const texto = input.value.trim();
+    if (texto === '') {
+        // Campo com texto invalido (ex.: letras) chega vazio: validity diferencia.
+        return { msg: input.validity.badInput
+            ? `O campo ${nomeCampo} tem um valor inválido. Use apenas números.`
+            : `Preencha o campo ${nomeCampo}.` };
+    }
+    const formato = decimais === 0 ? /^\d+$/ : new RegExp(`^\\d+(\\.\\d{1,${decimais}})?$`);
+    const faixa = decimais === 0
+        ? `um número inteiro de ${limite.min.toLocaleString('pt-BR')} a ${limite.max.toLocaleString('pt-BR')}`
+        : `um valor de ${limite.min.toFixed(2).replace('.', ',')} a ${limite.max.toFixed(2).replace('.', ',')}, com até duas casas decimais`;
+    const valor = Number(texto);
+    if (!formato.test(texto) || valor < limite.min || valor > limite.max) {
+        return { msg: `${nomeCampo}: informe ${faixa}.` };
+    }
+    return { valor };
+}
+
+/**
+ * Le a tela de uma etapa. Devolve { dados, erros }: `dados` e o objeto que vai
+ * para o calculo, e so existe quando `erros` esta vazio.
+ */
+function lerEtapa(prefixo) {
+    const de = ETAPA_NAS_MENSAGENS[prefixo];
+    const erros = [];
+    const campo = (sufixo) => document.getElementById(`inp-${prefixo}-${sufixo}`);
+
+    const mat = lerNumero(campo('mat'), `Matrículas 2026 ${de}`, LIMITES.matriculas, 0);
+    if (mat.msg) erros.push({ alvo: campo('mat'), msg: mat.msg });
+    const meta = lerNumero(campo('meta'), `Meta IDEPE 2026 ${de}`, LIMITES.meta, 2);
+    if (meta.msg) erros.push({ alvo: campo('meta'), msg: meta.msg });
 
     const participou = estado.participacao[prefixo];
-    if (participou === null) return null;
-
-    const mat = parseFloat(document.getElementById(`inp-${prefixo}-mat`).value);
-    if (!mat || mat <= 0) {
-        return reclamar('Informe as matrículas da etapa (maior que zero).');
+    if (participou === null) {
+        erros.push({ alvo: document.getElementById(`bloco-${prefixo}-part`), msg: `Responda se a participação ${de} atingiu 80%.` });
+    }
+    let res = {};
+    if (participou) {
+        res = lerNumero(campo('res'), `Resultado IDEPE 2026 ${de}`, LIMITES.resultado, 2);
+        if (res.msg) erros.push({ alvo: campo('res'), msg: res.msg });
     }
 
-    const meta = parseFloat(document.getElementById(`inp-${prefixo}-meta`).value);
-    if (isNaN(meta) || meta <= 0) {
-        return reclamar('Preencha a meta IDEPE com um valor válido (maior que zero).');
-    }
-
+    if (erros.length > 0) return { dados: null, erros };
     // Etapa sem 80% entra com IDEPE zero: nao tem resultado a informar.
-    if (!participou) {
-        return { matriculas: Math.round(mat), participacao_maior_80: false, meta };
-    }
-
-    const res = parseFloat(document.getElementById(`inp-${prefixo}-res`).value);
-    if (isNaN(res) || res <= 0) {
-        return reclamar('Preencha o resultado IDEPE com um valor válido (maior que zero).');
-    }
-    return {
-        matriculas: Math.round(mat),
-        participacao_maior_80: true,
-        meta,
-        resultado: res,
-    };
+    const dados = { matriculas: mat.valor, participacao_maior_80: participou, meta: meta.valor };
+    if (participou) dados.resultado = res.valor;
+    return { dados, erros };
 }
 
-/** Revalida a etapa e guarda o objeto (ou null) em estado.respostas. */
-function recalcularEtapa(prefixo, silencioso = false) {
-    estado.respostas[`etapa_${prefixo}`] = validarInputsEtapa(prefixo, silencioso);
-    atualizarUI();
-}
-
-document.addEventListener('focusout', (e) => {
-    if (!e.target.matches('.input-campo input')) return;
-    const step = e.target.closest('.step');
-    if (!step) return;
-    const stepNum = parseInt(step.dataset.step);
-    let prefixo = null;
-    if (stepNum === 1) prefixo = 'ai';
-    if (stepNum === 2) prefixo = 'af';
-    if (stepNum === 3) prefixo = 'em';
-    if (!prefixo) return;
-
-    // So valida quando os campos esperados tem algo digitado: sair de
-    // "Matriculas" para preencher "Meta" nao e erro, e o toast a cada tab era
-    // ruido. Etapa sem participacao nao tem resultado.
-    const esperados = estado.participacao[prefixo] ? ['mat', 'meta', 'res'] : ['mat', 'meta'];
-    const preenchidos = esperados.every(function (campo) {
-        return document.getElementById(`inp-${prefixo}-${campo}`).value.trim() !== '';
+/* Mensagem em vermelho e caixa alta logo abaixo do campo ou da pergunta. */
+function mostrarErrosDeCampo(erros) {
+    erros.forEach(({ alvo, msg }) => {
+        const ehCampo = alvo.tagName === 'INPUT';
+        const caixa = ehCampo ? alvo.closest('.input-campo') : alvo;
+        const p = document.createElement('p');
+        p.className = 'erro-campo';
+        p.setAttribute('role', 'alert');
+        p.textContent = msg;
+        caixa.appendChild(p);
+        caixa.classList.add('com-erro');
+        if (ehCampo) alvo.setAttribute('aria-invalid', 'true');
     });
-    if (!preenchidos) {
-        estado.respostas[`etapa_${prefixo}`] = null;
-        atualizarUI();
-        return;
-    }
-    recalcularEtapa(prefixo);
+    const primeiro = erros[0].alvo;
+    primeiro.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (primeiro.tagName === 'INPUT') primeiro.focus({ preventScroll: true });
+}
+
+function limparErros(raiz) {
+    raiz.querySelectorAll('.erro-campo').forEach((el) => el.remove());
+    raiz.querySelectorAll('.com-erro').forEach((el) => el.classList.remove('com-erro'));
+    if (raiz.classList.contains('com-erro')) raiz.classList.remove('com-erro');
+    raiz.querySelectorAll('[aria-invalid]').forEach((el) => el.removeAttribute('aria-invalid'));
+}
+
+/* Digitar de novo num campo apaga a mensagem dele. */
+document.addEventListener('input', (e) => {
+    const caixa = e.target.closest('.input-campo');
+    if (caixa) limparErros(caixa);
 });
 
 async function enviarSimulacao() {
@@ -355,7 +411,8 @@ async function enviarSimulacao() {
 function montarResumo() {
     const r = estado.respostas;
     const etapasNomes = { ai: 'Anos Iniciais', af: 'Anos Finais', em: 'Ensino Médio' };
-    let html = '<h2 class="resumo-titulo">Resumo das Informações</h2>';
+    let html = '<h2 class="resumo-titulo">Resumo das Informações</h2>'
+        + '<p class="pergunta-instrucao">Confira os dados antes de ver o resultado. Para corrigir algo, use Voltar.</p>';
 
     r.etapas_selecionadas.forEach(chave => {
         const dados = r[`etapa_${chave}`];
@@ -372,7 +429,7 @@ function montarResumo() {
             <div class="resumo-item ${parseFloat(variacao) >= 0 ? 'sim' : 'nao'}">
                 <div class="resumo-icone">${parseFloat(variacao) >= 0 ? '+' : '-'}</div>
                 <div class="resumo-texto">
-                    <strong>${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | ${rotuloIdepe} | Diferença Meta-Resultado: ${sinal}${variacao}
+                    <strong class="etapa-nome etapa-${chave}">${etapasNomes[chave]}</strong> — Meta: ${dados.meta} | ${rotuloIdepe} | Diferença Meta-Resultado: ${sinal}${variacao}
                 </div>
             </div>`;
     });
@@ -457,7 +514,11 @@ function reiniciar() {
         reduziu_desigualdade: null,
         terco_menor_elementares: null,
     };
-    document.querySelectorAll('.opcao-card').forEach(c => c.classList.remove('selecionado'));
+    document.querySelectorAll('.opcao-card').forEach(c => {
+        c.classList.remove('selecionado');
+        c.setAttribute('aria-checked', 'false');
+    });
+    limparErros(document.getElementById('area-conteudo'));
     document.querySelectorAll('.btn-simnao').forEach(b => b.classList.remove('selecionado'));
     document.querySelectorAll('.input-campo input').forEach(i => i.value = '');
     ['ai', 'af', 'em'].forEach((prefixo) => {

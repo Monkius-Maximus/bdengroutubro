@@ -41,12 +41,6 @@ var TETO_BDE = 3.0;
 // IDEPE a partir do qual o excedente acima de 100% soma com a equidade.
 var IDEPE_ACUMULA_COM_EQUIDADE = 2.0;
 
-// Faixas da validacao de dados da planilha (B6:B8 e B19/B20 etc.).
-var MATRICULAS_MIN = 8;
-var MATRICULAS_MAX = 50000;
-var IDEPE_MIN = 1.5;
-var IDEPE_MAX = 9.2;
-
 var NOMES_ETAPAS = {
     ai: 'Anos Iniciais',
     af: 'Anos Finais',

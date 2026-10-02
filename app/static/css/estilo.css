@@ -15,6 +15,7 @@
     --verde: #16a34a;
     --amarelo: #ca8a04;
     --vermelho: #dc2626;
+    --vermelho-texto: #b91c1c;
     --verde-bg: #dcfce7;
     --amarelo-bg: #fef9c3;
     --vermelho-bg: #fee2e2;
@@ -23,6 +24,14 @@
     --sombra-md: 0 4px 24px rgba(26, 58, 92, 0.12);
     --raio: 12px;
     --overlay: rgba(15, 23, 42, 0.45);
+
+    /* Uma cor por etapa, usada so no nome da etapa, em todas as telas.
+       Escolhidas para nao se confundirem entre si (inclusive com daltonismo)
+       nem com o azul da marca e as cores de status; contraste >= 4,9:1 em todos
+       os fundos onde aparecem. */
+    --etapa-ai: #6d28d9;
+    --etapa-af: #be185d;
+    --etapa-em: #3f6212;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -145,6 +154,22 @@ body {
     line-height: 1.4;
 }
 
+.pergunta-instrucao {
+    font-size: 0.9rem;
+    text-align: center;
+    color: var(--cinza);
+    margin: -8px 0 16px;
+    line-height: 1.4;
+}
+
+/* Nome de etapa, sempre na cor da etapa */
+.etapa-nome { font-weight: 700; }
+/* Dois seletores de classe: vence regras como ".resumo-texto strong", que
+   pintariam o nome de azul. */
+.etapa-nome.etapa-ai { color: var(--etapa-ai); }
+.etapa-nome.etapa-af { color: var(--etapa-af); }
+.etapa-nome.etapa-em { color: var(--etapa-em); }
+
 /* Opcoes */
 .opcoes {
     display: flex;
@@ -231,6 +256,34 @@ body {
     outline: none;
     border-color: var(--azul-claro);
     box-shadow: 0 0 0 3px rgba(42, 100, 150, 0.15);
+}
+
+.dica-campo {
+    font-size: 0.78rem;
+    color: var(--cinza);
+    line-height: 1.35;
+}
+
+/* Erro de preenchimento: vermelho e caixa alta, abaixo do campo ou pergunta */
+.erro-campo {
+    color: var(--vermelho-texto);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    line-height: 1.35;
+    margin-top: 6px;
+}
+.input-campo.com-erro input {
+    border-color: var(--vermelho);
+    background: var(--vermelho-bg);
+}
+.pergunta-bloco.com-erro,
+.opcoes.com-erro .opcao-card {
+    border-color: var(--vermelho);
+}
+.opcao-card:focus-visible {
+    outline: 3px solid var(--azul-claro);
+    outline-offset: 2px;
 }
 
 /* Perguntas com Sim/Não (Step 4 equidade) */

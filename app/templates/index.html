@@ -33,20 +33,21 @@
             <!-- STEP 0: Etapas -->
             <div class="step" data-step="0">
                 <h2 class="pergunta-titulo">Quais etapas sua escola <strong>pactuou metas</strong> para 2026?</h2>
+                <p class="pergunta-instrucao">Marque todas as etapas com meta IDEPE pactuada. Nas próximas telas você informa os dados de cada uma.</p>
                 <div class="opcoes" id="opcoes-etapas">
-                    <div class="opcao-card" data-campo="etapa_ai" onclick="toggleOpcao(this)">
+                    <div class="opcao-card" data-campo="etapa_ai" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleOpcao(this)" onkeydown="teclaNaOpcao(event, this)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                        <span class="texto">Anos Iniciais (1º ao 5º ano)</span>
+                        <span class="texto"><span class="etapa-nome etapa-ai">Anos Iniciais</span> (1º ao 5º ano)</span>
                         <span class="check"></span>
                     </div>
-                    <div class="opcao-card" data-campo="etapa_af" onclick="toggleOpcao(this)">
+                    <div class="opcao-card" data-campo="etapa_af" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleOpcao(this)" onkeydown="teclaNaOpcao(event, this)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-                        <span class="texto">Anos Finais (6º ao 9º ano)</span>
+                        <span class="texto"><span class="etapa-nome etapa-af">Anos Finais</span> (6º ao 9º ano)</span>
                         <span class="check"></span>
                     </div>
-                    <div class="opcao-card" data-campo="etapa_em" onclick="toggleOpcao(this)">
+                    <div class="opcao-card" data-campo="etapa_em" role="checkbox" aria-checked="false" tabindex="0" onclick="toggleOpcao(this)" onkeydown="teclaNaOpcao(event, this)">
                         <svg class="icone-svg" viewBox="0 0 24 24"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-                        <span class="texto">Ensino Médio (1º ao 3º ano)</span>
+                        <span class="texto"><span class="etapa-nome etapa-em">Ensino Médio</span> (1º ao 3º ano)</span>
                         <span class="check"></span>
                     </div>
                 </div>
@@ -54,20 +55,23 @@
 
             <!-- STEP 1: AI -->
             <div class="step" data-step="1" style="display:none">
-                <h2 class="pergunta-titulo">Informe os dados dos <strong>Anos Iniciais</strong></h2>
+                <h2 class="pergunta-titulo">Informe os dados dos <span class="etapa-nome etapa-ai">Anos Iniciais</span></h2>
+                <p class="pergunta-instrucao">Preencha as matrículas e a meta e responda sobre a participação. Todos os campos são obrigatórios.</p>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label>Matrículas 2026</label>
-                        <input type="number" id="inp-ai-mat" placeholder="Ex: 120" min="1">
+                        <label for="inp-ai-mat">Matrículas 2026</label>
+                        <input type="number" id="inp-ai-mat" inputmode="numeric" placeholder="Ex: 120" min="10" max="300000" step="1" aria-describedby="dica-ai-mat">
+                        <p class="dica-campo" id="dica-ai-mat">Total de alunos matriculados na etapa em 2026. Número inteiro de 10 a 300.000.</p>
                     </div>
                     <div class="input-campo">
-                        <label>Meta IDEPE</label>
-                        <input type="number" id="inp-ai-meta" placeholder="Ex: 4.50" step="0.01" min="0">
+                        <label for="inp-ai-meta">Meta IDEPE 2026</label>
+                        <input type="number" id="inp-ai-meta" inputmode="decimal" placeholder="Ex: 4.50" min="2" max="6" step="0.01" aria-describedby="dica-ai-meta">
+                        <p class="dica-campo" id="dica-ai-meta">Meta pactuada no Termo de Compromisso. De 2,00 a 6,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
-                <div class="pergunta-bloco">
-                    <p class="pergunta-item">Esta etapa atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE?</p>
+                <div class="pergunta-bloco" id="bloco-ai-part">
+                    <p class="pergunta-item">Os <span class="etapa-nome etapa-ai">Anos Iniciais</span> atingiram <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE 2026?</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="ai" data-valor="true" onclick="toggleParticipacaoEtapa(this)">Sim</button>
                         <button type="button" class="btn-simnao" data-campo="ai" data-valor="false" onclick="toggleParticipacaoEtapa(this)">Não</button>
@@ -76,8 +80,9 @@
 
                 <div class="input-grupo" id="idepe-ai" style="display:none">
                     <div class="input-campo">
-                        <label>Resultado IDEPE</label>
-                        <input type="number" id="inp-ai-res" placeholder="Ex: 4.70" step="0.01" min="0">
+                        <label for="inp-ai-res">Resultado IDEPE 2026</label>
+                        <input type="number" id="inp-ai-res" inputmode="decimal" placeholder="Ex: 4.70" min="0" max="10" step="0.01" aria-describedby="dica-ai-res">
+                        <p class="dica-campo" id="dica-ai-res">IDEPE obtido pela escola na etapa. De 0,00 a 10,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
@@ -88,20 +93,23 @@
 
             <!-- STEP 2: AF -->
             <div class="step" data-step="2" style="display:none">
-                <h2 class="pergunta-titulo">Informe os dados dos <strong>Anos Finais</strong></h2>
+                <h2 class="pergunta-titulo">Informe os dados dos <span class="etapa-nome etapa-af">Anos Finais</span></h2>
+                <p class="pergunta-instrucao">Preencha as matrículas e a meta e responda sobre a participação. Todos os campos são obrigatórios.</p>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label>Matrículas 2026</label>
-                        <input type="number" id="inp-af-mat" placeholder="Ex: 200" min="1">
+                        <label for="inp-af-mat">Matrículas 2026</label>
+                        <input type="number" id="inp-af-mat" inputmode="numeric" placeholder="Ex: 200" min="10" max="300000" step="1" aria-describedby="dica-af-mat">
+                        <p class="dica-campo" id="dica-af-mat">Total de alunos matriculados na etapa em 2026. Número inteiro de 10 a 300.000.</p>
                     </div>
                     <div class="input-campo">
-                        <label>Meta IDEPE</label>
-                        <input type="number" id="inp-af-meta" placeholder="Ex: 4.50" step="0.01" min="0">
+                        <label for="inp-af-meta">Meta IDEPE 2026</label>
+                        <input type="number" id="inp-af-meta" inputmode="decimal" placeholder="Ex: 4.50" min="2" max="6" step="0.01" aria-describedby="dica-af-meta">
+                        <p class="dica-campo" id="dica-af-meta">Meta pactuada no Termo de Compromisso. De 2,00 a 6,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
-                <div class="pergunta-bloco">
-                    <p class="pergunta-item">Esta etapa atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE?</p>
+                <div class="pergunta-bloco" id="bloco-af-part">
+                    <p class="pergunta-item">Os <span class="etapa-nome etapa-af">Anos Finais</span> atingiram <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE 2026?</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="af" data-valor="true" onclick="toggleParticipacaoEtapa(this)">Sim</button>
                         <button type="button" class="btn-simnao" data-campo="af" data-valor="false" onclick="toggleParticipacaoEtapa(this)">Não</button>
@@ -110,8 +118,9 @@
 
                 <div class="input-grupo" id="idepe-af" style="display:none">
                     <div class="input-campo">
-                        <label>Resultado IDEPE</label>
-                        <input type="number" id="inp-af-res" placeholder="Ex: 4.45" step="0.01" min="0">
+                        <label for="inp-af-res">Resultado IDEPE 2026</label>
+                        <input type="number" id="inp-af-res" inputmode="decimal" placeholder="Ex: 4.45" min="0" max="10" step="0.01" aria-describedby="dica-af-res">
+                        <p class="dica-campo" id="dica-af-res">IDEPE obtido pela escola na etapa. De 0,00 a 10,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
@@ -122,20 +131,23 @@
 
             <!-- STEP 3: EM -->
             <div class="step" data-step="3" style="display:none">
-                <h2 class="pergunta-titulo">Informe os dados do <strong>Ensino Médio</strong></h2>
+                <h2 class="pergunta-titulo">Informe os dados do <span class="etapa-nome etapa-em">Ensino Médio</span></h2>
+                <p class="pergunta-instrucao">Preencha as matrículas e a meta e responda sobre a participação. Todos os campos são obrigatórios.</p>
                 <div class="input-grupo">
                     <div class="input-campo">
-                        <label>Matrículas 2026</label>
-                        <input type="number" id="inp-em-mat" placeholder="Ex: 300" min="1">
+                        <label for="inp-em-mat">Matrículas 2026</label>
+                        <input type="number" id="inp-em-mat" inputmode="numeric" placeholder="Ex: 300" min="10" max="300000" step="1" aria-describedby="dica-em-mat">
+                        <p class="dica-campo" id="dica-em-mat">Total de alunos matriculados na etapa em 2026. Número inteiro de 10 a 300.000.</p>
                     </div>
                     <div class="input-campo">
-                        <label>Meta IDEPE</label>
-                        <input type="number" id="inp-em-meta" placeholder="Ex: 5.00" step="0.01" min="0">
+                        <label for="inp-em-meta">Meta IDEPE 2026</label>
+                        <input type="number" id="inp-em-meta" inputmode="decimal" placeholder="Ex: 5.00" min="2" max="6" step="0.01" aria-describedby="dica-em-meta">
+                        <p class="dica-campo" id="dica-em-meta">Meta pactuada no Termo de Compromisso. De 2,00 a 6,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
-                <div class="pergunta-bloco">
-                    <p class="pergunta-item">Esta etapa atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE?</p>
+                <div class="pergunta-bloco" id="bloco-em-part">
+                    <p class="pergunta-item">O <span class="etapa-nome etapa-em">Ensino Médio</span> atingiu <strong>participação &ge; 80%</strong> em todos os componentes avaliados no SAEPE 2026?</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="em" data-valor="true" onclick="toggleParticipacaoEtapa(this)">Sim</button>
                         <button type="button" class="btn-simnao" data-campo="em" data-valor="false" onclick="toggleParticipacaoEtapa(this)">Não</button>
@@ -144,8 +156,9 @@
 
                 <div class="input-grupo" id="idepe-em" style="display:none">
                     <div class="input-campo">
-                        <label>Resultado IDEPE</label>
-                        <input type="number" id="inp-em-res" placeholder="Ex: 5.10" step="0.01" min="0">
+                        <label for="inp-em-res">Resultado IDEPE 2026</label>
+                        <input type="number" id="inp-em-res" inputmode="decimal" placeholder="Ex: 5.10" min="0" max="10" step="0.01" aria-describedby="dica-em-res">
+                        <p class="dica-campo" id="dica-em-res">IDEPE obtido pela escola na etapa. De 0,00 a 10,00, com até duas casas decimais.</p>
                     </div>
                 </div>
 
@@ -157,8 +170,9 @@
             <!-- STEP 4: Equidade -->
             <div class="step" data-step="4" style="display:none">
                 <h2 class="pergunta-titulo">Responda sobre as <strong>Metas de Equidade</strong></h2>
+                <p class="pergunta-instrucao">Responda Sim ou Não às duas perguntas. Elas valem para a escola inteira, não para uma etapa.</p>
 
-                <div class="pergunta-bloco">
+                <div class="pergunta-bloco" id="bloco-reduziu_desigualdade">
                     <p class="pergunta-item">Houve evolução, no Saepe 2026, dos estudantes Pretos, Pardos e Indígenas e daqueles de nível socioeconômico mais baixo, em comparação com 2025? (Consulte o BI da Equidade)</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="reduziu_desigualdade" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
@@ -166,7 +180,7 @@
                     </div>
                 </div>
 
-                <div class="pergunta-bloco">
+                <div class="pergunta-bloco" id="bloco-terco_menor_elementares">
                     <p class="pergunta-item">Na sua Macrorregião, comparando com escolas do mesmo tipo, sua escola está entre as 33,3% (no primeiro terço) com menor percentual de estudantes nos níveis elementares no SAEPE 2026? (Consulte o BI do SAEPE – versão GRE - Botão PD - filtre as Gres da Macro região e o tipo de sua escola)</p>
                     <div class="botoes-simnao">
                         <button type="button" class="btn-simnao" data-campo="terco_menor_elementares" data-valor="true" onclick="toggleSimNaoPergunta(this)">Sim</button>
@@ -190,7 +204,7 @@
 
         <div class="navegacao" id="navegacao">
             <button class="btn btn-voltar" id="btn-voltar" onclick="voltar()" style="display:none">Voltar</button>
-            <button class="btn btn-proximo" id="btn-proximo" onclick="proximo()" disabled>Próximo</button>
+            <button class="btn btn-proximo" id="btn-proximo" onclick="proximo()">Próximo</button>
         </div>
 
     </main>
