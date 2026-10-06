@@ -94,21 +94,21 @@ em nenhum dígito digitado pelo gestor. Regressão coberta por
 
 ### B1. Assumir que os quesitos de equidade são cumulativos — [Mitigado]
 No BDE 2027 equidade e elementares **não somam**: atingir um ou os dois vale
-+100% uma vez só. Uma versão anterior deste simulador somava os dois (+200%);
++100% uma vez só. A exceção é o topo da tabela: com IDEPE de 200%, o segundo
+quesito vale +50%. Uma versão anterior deste simulador somava os dois (+200%);
 foi revertido pela seção 6 da regra.
 
 *Mitigação:* `EXTRACAO_PLANILHA.md` §5.1 registra a regra.
-`tests/test_cenarios.py` trava os cenários B e D, que são exatamente esse caso.
+`tests/test_cenarios.py` trava os cenários B, D, H2 e H3.
 
 ### B2. Esperar que desempenho acima da meta sempre aumente a cota — [Mitigado]
 No BDE 2027, sem quesito de equidade o IDEPE conta inteiro, até 200%. Com
-quesito, o excedente acima de 100% só soma se a escola chegar a 200% de IDEPE
-(variação ≥ 0,4); entre 100% e 200% a escola troca o excedente pelo quesito e
-fica em 200%. É o caminho mais provável de contestação: com quesito, 125% e
-175% de IDEPE rendem o mesmo.
+quesito, a escola troca o excedente acima de 100% pelo quesito e fica em 200%,
+de 125% a 200% de IDEPE. É o caminho mais provável de contestação: com um
+quesito, 125% e 200% de IDEPE rendem o mesmo. Só com os dois quesitos o topo
+da tabela vale mais (250%).
 
-*Mitigação:* `cota_alem_resultado` expõe a parte trocada pelo quesito e o popup
-da "Cota Resultado" explica a troca em palavras.
+*Mitigação:* `cota_alem_resultado` expõe a parte trocada pelo quesito.
 
 ### B2b. Prometer valores intermediários que a regra não produz — [Mitigado]
 A regra produz um conjunto pequeno de valores distintos, e um texto do tipo
@@ -124,12 +124,9 @@ proximidade do teto — são coisas diferentes e a rotulagem explicita qual dela
 está na tela.
 
 ### B2c. Orientar a escola a "superar mais a meta" — [Mitigado]
-Com um quesito de equidade, subir o IDEPE entre 100% e 175% não muda nada: a
-escola já está em 200% pela troca. Só chegar a 200% de IDEPE soma de novo. Uma
-escola em 125% sem quesito ganha mais perseguindo um quesito (+75 pontos) do
-que subindo o IDEPE uma faixa (+25).
-
-*Mitigação:* o popup da "Cota Resultado" explica a troca.
+Com um quesito de equidade, subir o IDEPE acima de 100% não muda nada: a
+escola já está em 200% pela troca. Uma escola em 125% sem quesito ganha mais
+perseguindo um quesito (+75 pontos) do que subindo o IDEPE uma faixa (+25).
 
 ### B3. Tratar a participação como só um bônus — [Invertido no BDE 2027]
 Até o BDE 2026 a participação era apenas uma cota adicional de 50%, e o

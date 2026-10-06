@@ -17,18 +17,17 @@
      H47           media ponderada das variacoes pelas matriculas
      H45           conversao da media em percentual de atingimento
      equidade      +100% se reduziu desigualdade OU esta no terco de
-                   elementares — os dois quesitos nao somam entre si
+                   elementares; o segundo quesito so vale (+50%) com IDEPE
+                   de 200%
      B40           cota resultado:
                      sem quesito de equidade      idepe inteiro
-                     com quesito e IDEPE < 200%   min(idepe; 1)
-                     com quesito e IDEPE = 200%   idepe inteiro
+                     com quesito                  min(idepe; 1)
      B41           cota alem = idepe - B40, a parte trocada pelo quesito
      participacao  +50% so se TODAS as etapas atingiram 80%
-     total         min(B40 + equidade + participacao; 3.0)
+     total         min(B40 + equidade + elementares + participacao; 3.0)
 
-   O excedente acima de 100% e o quesito de equidade so se acumulam quando a
-   escola chega a 200% de IDEPE (variacao >= 0,4). Ver
-   docs/EXTRACAO_PLANILHA.md secao 5.1.
+   No topo da tabela, como na C45 da planilha: IDEPE de 200% + um quesito =
+   200%; + os dois quesitos = 250%. Ver docs/EXTRACAO_PLANILHA.md secao 5.1.
 
    Com todas as etapas acima de 80%, o percentual_idepe e identico ao do ciclo
    anterior: o zero so muda a conta de quem tem etapa sem participacao.
@@ -38,8 +37,10 @@ var COTA_EQUIDADE = 1.0;
 var COTA_PARTICIPACAO = 0.5;
 var TETO_BDE = 3.0;
 
-// IDEPE a partir do qual o excedente acima de 100% soma com a equidade.
-var IDEPE_ACUMULA_COM_EQUIDADE = 2.0;
+// Segundo quesito de equidade: so vale com o IDEPE no topo da tabela
+// (variacao media >= 0,4), e vale metade.
+var IDEPE_TOPO = 2.0;
+var COTA_SEGUNDO_QUESITO = 0.5;
 
 var NOMES_ETAPAS = {
     ai: 'Anos Iniciais',
@@ -132,19 +133,17 @@ function simularBde(payload) {
     var mediaVariacao = arredondarExcel(soma / matTotal);
     var percentualIdepe = converterDiferencaEmPercentual(mediaVariacao);
 
-    // Equidade: um quesito basta e os dois valem o mesmo que um. Vale para
-    // toda escola, tenha ou nao atingido 80% de participacao. Quem
-    // atinge os dois aparece com a cota em equidade.
-    var bonusEquidade = payload.reduziu_desigualdade ? COTA_EQUIDADE : 0.0;
-    var bonusElementares = payload.terco_menor_elementares && !payload.reduziu_desigualdade
-        ? COTA_EQUIDADE : 0.0;
-    var temQuesito = bonusEquidade + bonusElementares > 0.0;
+    // Equidade: o primeiro quesito vale +100% para toda escola, tenha ou nao
+    // atingido 80% de participacao, e aparece em equidade. O segundo so vale
+    // com IDEPE de 200%, e vale +50%, em elementares.
+    var doisQuesitos = !!(payload.reduziu_desigualdade && payload.terco_menor_elementares);
+    var temQuesito = !!(payload.reduziu_desigualdade || payload.terco_menor_elementares);
+    var bonusEquidade = temQuesito ? COTA_EQUIDADE : 0.0;
+    var bonusElementares = doisQuesitos && percentualIdepe >= IDEPE_TOPO ? COTA_SEGUNDO_QUESITO : 0.0;
 
-    // B40 / B41. Com quesito de equidade e IDEPE abaixo de 200%, a escola
-    // troca o excedente acima de 100% pelo quesito.
-    var cotaResultado = temQuesito && percentualIdepe < IDEPE_ACUMULA_COM_EQUIDADE
-        ? Math.min(percentualIdepe, 1.0)
-        : percentualIdepe;
+    // B40 / B41. Com quesito de equidade, a escola troca o excedente acima de
+    // 100% pelo quesito. Sem quesito, o IDEPE conta inteiro.
+    var cotaResultado = temQuesito ? Math.min(percentualIdepe, 1.0) : percentualIdepe;
     var cotaAlemResultado = arredondarExcel(percentualIdepe - cotaResultado);
 
     // Participacao: uma etapa sem 80% ja tira os +50%.

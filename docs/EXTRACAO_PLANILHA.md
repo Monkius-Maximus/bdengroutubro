@@ -114,33 +114,38 @@ e em uso na SEPLAG.
 **Regra do BDE 2027 (seção 6 — Bônus), definida pelo gestor da regra.** A
 `C45` e seus quatro ramos saíram do código; a regra vigente é:
 
-1. **Equidade e elementares não somam entre si.** Atingir um ou os dois vale
-   +100% uma vez só. Vale para toda escola, inclusive a que ficou sem IDEPE.
-   Quem atinge os dois aparece com a cota em `bonus_equidade`.
-2. **O excedente acima de 100% só soma com o quesito a partir de 200% de
-   IDEPE** (variação média ≥ 0,4 em relação à meta, já com o zero da §5.1-b).
-   Abaixo disso, a escola com quesito troca o excedente pelo quesito e o
-   resultado para em 100%. Sem quesito, o IDEPE conta inteiro, até 200%.
+1. **Um quesito de equidade vale +100%; o segundo quase nunca soma.**
+   Equidade ou elementares rendem +100% uma vez só, para toda escola, inclusive
+   a que ficou sem IDEPE. O segundo quesito só vale (+50%) quando o IDEPE está
+   no topo da tabela, 200%.
+2. **Com quesito, o excedente acima de 100% é trocado pelo quesito.** O
+   resultado para em 100% e a escola soma o quesito. Sem quesito, o IDEPE conta
+   inteiro, até 200%.
 3. **Os +50% de participação exigem 80% em todas as etapas.**
+
+No topo da tabela a regra é a da `C45`: IDEPE de 200% + um quesito = 200%;
++ os dois quesitos = 250%. Uma versão anterior deste simulador somava o
+excedente com o quesito (200% + 100%) e dava 300% com um quesito só; foi
+corrigido a pedido do gestor da regra.
 
 ```python
 tem_quesito = equidade or elementares
-if tem_quesito and percentual_idepe < 2.0:
-    cota_resultado = min(percentual_idepe, 1.0)
-else:
-    cota_resultado = percentual_idepe
-cota_bde = cota_resultado + (1.0 se tem_quesito)
+cota_resultado = min(percentual_idepe, 1.0) if tem_quesito else percentual_idepe
+cota_bde = (cota_resultado
+            + (1.0 se tem_quesito)
+            + (0.5 se os dois quesitos e percentual_idepe == 2.0))
 percentual_bde = min(cota_bde + (0.5 se todas as etapas com 80%), 3.0)
 ```
 
-| IDEPE | Sem quesito | Com quesito (1 ou 2) |
-|---|---|---|
-| 0% a 100% | IDEPE | IDEPE + 100% |
-| 125% a 175% | IDEPE | 200% |
-| 200% | 200% | 300% |
+| IDEPE | Sem quesito | Um quesito | Dois quesitos |
+|---|---|---|---|
+| 0% a 100% | IDEPE | IDEPE + 100% | IDEPE + 100% |
+| 125% a 175% | IDEPE | 200% | 200% |
+| 200% | 200% | 200% | 250% |
 
-Some +50% se todas as etapas tiveram 80%, com teto de 300%. Os casos estão
-travados em `tests/test_cenarios.py`.
+Some +50% se todas as etapas tiveram 80%. Os 300% só existem com IDEPE de
+200%, os dois quesitos e participação. Os casos estão travados em
+`tests/test_cenarios.py` (H, H2, H3).
 
 Registro do que ficou para trás: o 3º ramo da `C45` (`(B40+B41)>1 → 2`) era
 **inalcançável e redundante** — inalcançável porque `B40` é `min(H45; 1)`, logo
