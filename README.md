@@ -50,3 +50,8 @@ Passo a passo em [`docs/GOOGLE_SITES.md`](docs/GOOGLE_SITES.md).
 - **Backend**: FastAPI + Python
 - **Frontend**: HTML + CSS + JavaScript vanilla
 - **Templates**: Jinja2
+
+## Simulador IDEPE (`idepe/`)
+
+Pasta autossuficiente, pronta para virar um repositório próprio. Ver
+[`idepe/README.md`](idepe/README.md).
