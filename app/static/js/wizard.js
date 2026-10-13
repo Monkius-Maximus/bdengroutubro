@@ -180,7 +180,7 @@ function validarPasso(step) {
     if (step === PASSO_EQUIDADE) {
         const erros = [];
         if (estado.respostas.reduziu_desigualdade === null) {
-            erros.push({ alvo: document.getElementById('bloco-reduziu_desigualdade'), msg: 'Responda Sim ou Não à pergunta sobre a evolução dos estudantes PPI e de nível socioeconômico mais baixo.' });
+            erros.push({ alvo: document.getElementById('bloco-reduziu_desigualdade'), msg: 'Responda Sim ou Não à pergunta sobre a evolução percentual dos estudantes PPI e de nível socioeconômico mais baixo.' });
         }
         if (estado.respostas.terco_menor_elementares === null) {
             erros.push({ alvo: document.getElementById('bloco-terco_menor_elementares'), msg: 'Responda Sim ou Não à pergunta sobre o 1º terço de elementares.' });
