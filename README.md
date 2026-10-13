@@ -50,3 +50,19 @@ Passo a passo em [`docs/GOOGLE_SITES.md`](docs/GOOGLE_SITES.md).
 - **Backend**: FastAPI + Python
 - **Frontend**: HTML + CSS + JavaScript vanilla
 - **Templates**: Jinja2
+
+## Simulador IDEB (`ideb/`)
+
+Segunda aplicação sobre o mesmo front-end: reaproveita o `estilo.css`, o logo,
+o rodapé, os popups e o fluxo do wizard do BDE. Porta a aba "Simulador Ideb"
+da planilha do Núcleo da Seplag: IDEB = N × P por etapa, com P a média
+harmônica das aprovações e N a média de LP e MT padronizadas pelos limites do
+SAEB 1997. Estática, sem backend: https://monkius-maximus.github.io/bdengroutubro/ideb/
+
+- `ideb/motor.js` — o cálculo, sem DOM
+- `ideb/wizard.js` — navegação e telas
+- `ideb/ideb.css` — só o que o `estilo.css` do BDE não tem
+
+`tests/test_ideb.py` confere o motor contra valores calculados pela própria
+planilha. Para levar a outro repositório, copie `ideb/`, `app/static/css/estilo.css`
+e `app/static/img/logo-ngr.png` e ajuste os caminhos `../app/static/`.
