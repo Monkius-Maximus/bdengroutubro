@@ -1,8 +1,8 @@
 /* ============================================================================
    Wizard IDEB — navegacao, leitura dos campos e telas de resumo e resultado.
 
-   Mesmo fluxo do simulador do BDE (app/static/js/wizard.js): etapas, uma
-   tela por etapa marcada, resumo e resultado. O calculo esta em motor.js.
+   Mesmo fluxo do Simulador BDE: etapas, uma tela por etapa marcada, resumo e
+   resultado. O calculo esta em motor.js.
    ============================================================================ */
 
 /* Indices fixos no template. O numero de telas visiveis varia com as etapas

@@ -19,8 +19,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-RAIZ = Path(__file__).resolve().parent.parent
-MOTOR = RAIZ / "ideb/motor.js"
+MOTOR = Path(__file__).resolve().parent.parent / "motor.js"
 
 # (descricao, etapa, aprovacoes preenchidas, LP, MT, P, N, IDEB da planilha)
 CASOS = [
