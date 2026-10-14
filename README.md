@@ -66,8 +66,3 @@ SAEB 1997. Estática, sem backend: https://monkius-maximus.github.io/bdengroutub
 `tests/test_ideb.py` confere o motor contra valores calculados pela própria
 planilha. Para levar a outro repositório, copie `ideb/`, `app/static/css/estilo.css`
 e `app/static/img/logo-ngr.png` e ajuste os caminhos `../app/static/`.
-
-## Simulador IDEPE (`idepe/`)
-
-Pasta autossuficiente, pronta para virar um repositório próprio. Ver
-[`idepe/README.md`](idepe/README.md).
