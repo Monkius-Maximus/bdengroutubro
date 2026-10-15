@@ -380,6 +380,10 @@ body {
     flex-shrink: 0;
 }
 .footer-creditos {
+    border: none;
+    background: none;
+    font-family: inherit;
+    cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -396,6 +400,37 @@ body {
 .footer-creditos .sem-quebra {
     white-space: nowrap;
 }
+.footer-creditos:hover span { text-decoration: underline; }
+.footer-creditos:focus-visible {
+    outline: 3px solid var(--azul-claro);
+    outline-offset: 2px;
+    border-radius: 8px;
+}
+
+/* Videos e WhatsApp juntos no canto direito */
+.footer-grupo {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+a.footer-btn { text-decoration: none; }
+
+/* Popup de creditos: a imagem do NGR-Educacao no topo */
+.popup-creditos-body {
+    font-size: 0.9rem;
+    color: #374151;
+    line-height: 1.5;
+    text-align: center;
+}
+.popup-creditos-body p + p { margin-top: 10px; }
+.popup-banner {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin-bottom: 14px;
+}
+
 .footer-logo {
     height: 32px;
     width: 32px;
@@ -686,4 +721,10 @@ body {
         height: 24px;
         width: 24px;
     }
+    /* Tres botoes numa linha so ate 360px: Saiba mais, Videos e WhatsApp. */
+    .footer-btn {
+        padding: 7px 10px;
+        gap: 5px;
+    }
+    .footer-grupo { gap: 6px; }
 }
