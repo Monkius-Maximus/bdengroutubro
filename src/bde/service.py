@@ -12,20 +12,19 @@ Cadeia de calculo:
   H47              media ponderada das variacoes pelas matriculas
   H45              conversao da media em percentual (tabela _TABELA)
   equidade         +100% se reduziu desigualdade OU esta no terco de
-                   elementares — os dois quesitos nao somam entre si
+                   elementares; o segundo quesito so vale (+50%) com IDEPE
+                   de 200%
   B40              cota resultado:
                      sem quesito de equidade      percentual_idepe inteiro
-                     com quesito e IDEPE < 200%   min(percentual_idepe, 1)
-                     com quesito e IDEPE = 200%   percentual_idepe inteiro
+                     com quesito                  min(percentual_idepe, 1)
   B41              cota alem do resultado = percentual_idepe - B40, a parte
                    do resultado trocada pelo quesito de equidade
   participacao     +50% so se TODAS as etapas atingiram 80%
-  total            min(B40 + equidade + participacao, 3.0)
+  total            min(B40 + equidade + elementares + participacao, 3.0)
 
-O excedente acima de 100% e o quesito de equidade so se acumulam quando a
-escola chega a 200% de IDEPE (variacao >= 0,4). Abaixo disso ela fica com o
-maior dos dois caminhos, que com quesito e sempre 100% + 100%. Ver
-docs/EXTRACAO_PLANILHA.md secao 5.1.
+Com quesito, a escola troca o excedente acima de 100% pelo quesito. No topo
+da tabela, como na C45 da planilha: IDEPE de 200% + um quesito = 200%; + os
+dois quesitos = 250%. Ver docs/EXTRACAO_PLANILHA.md secao 5.1.
 
 Com todas as etapas acima de 80%, o percentual_idepe e identico ao do ciclo
 anterior: o zero so muda a conta de quem tem etapa sem participacao.
@@ -78,9 +77,10 @@ COTA_EQUIDADE: Final[float] = 1.0
 COTA_PARTICIPACAO: Final[float] = 0.5
 TETO_BDE: Final[float] = 3.0
 
-# IDEPE a partir do qual o excedente acima de 100% soma com a equidade. E o
-# topo da tabela: variacao media >= 0,4.
-IDEPE_ACUMULA_COM_EQUIDADE: Final[float] = 2.0
+# Segundo quesito de equidade: so vale com o IDEPE no topo da tabela
+# (variacao media >= 0,4), e vale metade.
+IDEPE_TOPO: Final[float] = 2.0
+COTA_SEGUNDO_QUESITO: Final[float] = 0.5
 
 
 # ============================================================================
@@ -134,19 +134,17 @@ def calcular_bde(req: RequisicaoBDE) -> RespostaBDE:
     # 4. Conversao (H45)
     percentual_idepe = _converter(media)
 
-    # 5. Equidade: um quesito basta e os dois valem o mesmo que um. O +100%
-    #    vale para toda escola, tenha ou nao atingido 80% de participacao.
-    #    Quem atinge os dois aparece com a cota em equidade.
-    cota_eq = COTA_EQUIDADE if req.reduziu_desigualdade else 0.0
-    cota_el = COTA_EQUIDADE if req.terco_menor_elementares and not req.reduziu_desigualdade else 0.0
-    tem_quesito = cota_eq + cota_el > 0.0
+    # 5. Equidade: o primeiro quesito vale +100% para toda escola, tenha ou
+    #    nao atingido 80% de participacao, e aparece em equidade. O segundo so
+    #    vale com IDEPE de 200%, e vale +50%, em elementares.
+    dois_quesitos = req.reduziu_desigualdade and req.terco_menor_elementares
+    tem_quesito = req.reduziu_desigualdade or req.terco_menor_elementares
+    cota_eq = COTA_EQUIDADE if tem_quesito else 0.0
+    cota_el = COTA_SEGUNDO_QUESITO if dois_quesitos and percentual_idepe >= IDEPE_TOPO else 0.0
 
-    # 6. B40 / B41. Com quesito de equidade e IDEPE abaixo de 200%, a escola
-    #    troca o excedente acima de 100% pelo quesito.
-    if tem_quesito and percentual_idepe < IDEPE_ACUMULA_COM_EQUIDADE:
-        cota_resultado = min(percentual_idepe, 1.0)
-    else:
-        cota_resultado = percentual_idepe
+    # 6. B40 / B41. Com quesito de equidade, a escola troca o excedente acima
+    #    de 100% pelo quesito. Sem quesito, o IDEPE conta inteiro.
+    cota_resultado = min(percentual_idepe, 1.0) if tem_quesito else percentual_idepe
     cota_alem = round(percentual_idepe - cota_resultado, 4)
 
     # 7. Participacao: uma etapa sem 80% ja tira os +50%.

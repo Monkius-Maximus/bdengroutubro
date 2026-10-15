@@ -23,9 +23,10 @@ Referências de células (aba "Simulador BDE"):
 
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 # ---------------------------------------------------------------------------
@@ -42,8 +43,12 @@ class EtapaIDEPE(BaseModel):
 
     matriculas: int = Field(
         ...,
-        gt=0,
-        description="Quantidade de matrículas na etapa. Peso na média ponderada.",
+        ge=10,
+        le=300_000,
+        description=(
+            "Quantidade de matrículas na etapa, de 10 a 300.000. Peso na média "
+            "ponderada."
+        ),
     )
     participacao_maior_80: bool = Field(
         ...,
@@ -54,17 +59,31 @@ class EtapaIDEPE(BaseModel):
     )
     meta: float = Field(
         ...,
-        gt=0,
-        description="Meta IDEPE pactuada para a etapa (ex: 4.50).",
+        ge=2.0,
+        le=6.0,
+        description=(
+            "Meta IDEPE pactuada para a etapa, de 2,00 a 6,00, com até duas "
+            "casas decimais (ex: 4.50)."
+        ),
     )
     resultado: Optional[float] = Field(
         None,
-        gt=0,
+        ge=0.0,
+        le=10.0,
         description=(
-            "Resultado IDEPE obtido pela escola (ex: 4.70). Só existe quando a "
-            "etapa atingiu 80% de participação; sem isso o IDEPE é zero."
+            "Resultado IDEPE obtido pela escola, de 0,00 a 10,00, com até duas "
+            "casas decimais (ex: 4.70). Só existe quando a etapa atingiu 80% de "
+            "participação; sem isso o IDEPE é zero."
         ),
     )
+
+    @field_validator("meta", "resultado")
+    @classmethod
+    def _ate_duas_casas_decimais(cls, valor: Optional[float]) -> Optional[float]:
+        """4.555 é recusado, não arredondado: o gestor digitou outro número."""
+        if valor is not None and Decimal(str(valor)).as_tuple().exponent < -2:
+            raise ValueError("use no máximo duas casas decimais")
+        return valor
 
     @model_validator(mode="after")
     def _resultado_segue_a_participacao(self):

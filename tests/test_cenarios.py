@@ -113,14 +113,36 @@ CENARIOS = [
     ),
     (
         "H",
-        "1 etapa, com 80%, +0,40, 1 quesito — resultado e quesito acumulam",
+        "1 etapa, com 80%, +0,40, 1 quesito — 200% + 50%, nao 300%",
         RequisicaoBDE(
             etapa_ai=etapa(300, True, meta=4.50, resultado=4.90),
             reduziu_desigualdade=False,
             terco_menor_elementares=True,
         ),
         2.0,
+        2.5,
+    ),
+    (
+        "H2",
+        "1 etapa, com 80%, +0,40, 2 quesitos — o unico caminho para 300%",
+        RequisicaoBDE(
+            etapa_ai=etapa(300, True, meta=4.50, resultado=4.90),
+            reduziu_desigualdade=True,
+            terco_menor_elementares=True,
+        ),
+        2.0,
         3.0,
+    ),
+    (
+        "H3",
+        "1 etapa, com 80%, +0,35, 2 quesitos — abaixo do topo os dois valem um",
+        RequisicaoBDE(
+            etapa_ai=etapa(300, True, meta=4.50, resultado=4.85),
+            reduziu_desigualdade=True,
+            terco_menor_elementares=True,
+        ),
+        1.75,
+        2.5,
     ),
     (
         "I",
