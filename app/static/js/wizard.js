@@ -296,18 +296,16 @@ function toggleParticipacaoEtapa(btn) {
  * Devolve { valor } ou { msg } com o motivo da recusa.
  */
 function lerNumero(input, nomeCampo, limite, decimais) {
+    // O campo e de texto e quem le o numero e o simulador: o campo numerico do
+    // navegador trata a virgula de um jeito em cada navegador, e ha navegador
+    // que a apaga ("0,5" virava 5). Aceita virgula ou ponto como separador.
     const texto = input.value.trim();
-    if (texto === '') {
-        // Campo com texto invalido (ex.: letras) chega vazio: validity diferencia.
-        return { msg: input.validity.badInput
-            ? `O campo ${nomeCampo} tem um valor inválido. Use apenas números.`
-            : `Preencha o campo ${nomeCampo}.` };
-    }
-    const formato = decimais === 0 ? /^\d+$/ : new RegExp(`^\\d+(\\.\\d{1,${decimais}})?$`);
+    if (texto === '') return { msg: `Preencha o campo ${nomeCampo}.` };
+    const formato = decimais === 0 ? /^\d+$/ : new RegExp(`^\\d+([.,]\\d{1,${decimais}})?$`);
     const faixa = decimais === 0
         ? `um número inteiro de ${limite.min.toLocaleString('pt-BR')} a ${limite.max.toLocaleString('pt-BR')}`
         : `um valor de ${limite.min.toFixed(2).replace('.', ',')} a ${limite.max.toFixed(2).replace('.', ',')}, com até duas casas decimais`;
-    const valor = Number(texto);
+    const valor = Number(texto.replace(',', '.'));
     if (!formato.test(texto) || valor < limite.min || valor > limite.max) {
         return { msg: `${nomeCampo}: informe ${faixa}.` };
     }
